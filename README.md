@@ -1,4 +1,5 @@
-# SvelteKit + Tailwind CSS + Supabase Boilerplate 🚀
+# Introduction in English 
+## SvelteKit + Tailwind CSS + Supabase Boilerplate 🚀
 
 This boilerplate provides a quick and easy setup for building modern web applications using SvelteKit, Tailwind CSS, and Supabase. It comes preconfigured with essential libraries and tools to help you kickstart your project in no time! ⚡
 
@@ -14,8 +15,9 @@ This boilerplate provides a quick and easy setup for building modern web applica
 
 1. Clone the repository:
 
-  ```bash
-  git clone https://github.com/yourusername/sveltekit-tailwindcss-supabase-boilerplate.git```
+```
+git clone https://github.com/yourusername/sveltekit-tailwindcss-supabase-boilerplate.git
+```
 
 2. Install dependencies
 ```
@@ -59,6 +61,7 @@ For more information on setting up and configuring the individual components of 
 │       ├── +page.server.js
 │       └── +page.svelte
 ├── static
+│   ├── favicon.png
 │   ├── supabase.png
 │   ├── svelte.png
 │   └── tailwindcss.png
@@ -71,8 +74,10 @@ Contributions are welcome! If you have any suggestions, bug reports, or feature 
 
 ## License 📄
 This project is licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) License. See the LICENSE file for more details.
+
 ---
-# SvelteKit + Tailwind CSS + Supabase 보일러플레이트 🚀
+# 한국어 소개
+## SvelteKit + Tailwind CSS + Supabase 보일러플레이트 🚀
 
 이 보일러플레이트는 SvelteKit, Tailwind CSS 및 Supabase를 사용하여 현대적인 웹 애플리케이션을 빠르고 쉽게 구축할 수 있도록 제공합니다. 필수 라이브러리와 도구가 사전 구성되어 있어 프로젝트를 빠르게 시작할 수 있습니다! ⚡
 
@@ -108,7 +113,7 @@ This project is licensed under the Creative Commons Attribution 4.0 Internationa
 ```
   npm run dev
 ```
-  이제 애플리케이션이 `http://localhost:3000`에서 실행되어야 합니다.
+  이제 애플리케이션이 `http://localhost:5173`에서 실행되어야 합니다.
 
 ## 문서 📚
 
@@ -135,7 +140,10 @@ This project is licensed under the Creative Commons Attribution 4.0 Internationa
 │       ├── +page.server.js
 │       └── +page.svelte
 ├── static
-│   └── favicon.png
+│   ├── favicon.png
+│   ├── supabase.png
+│   ├── svelte.png
+│   └── tailwindcss.png
 ├── svelte.config.js
 ├── tailwind.config.js
 └── vite.config.js
