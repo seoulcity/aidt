@@ -27,15 +27,68 @@ npm install
 3. Set up environment variables:
 Create a .env file in the root directory and add the following variables:
 ```
-SUPABASE_PROJECT_ID=your-supabase-project-id
-SUPABASE_API_KEY=your-supabase-api-key
+VITE_SUPABASE_URL=your-supabase-url
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
-4. Start the development server:
+4. Configure Vite:
+Update the vite.config.js file with the following configuration:
+```
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [sveltekit()],
+  server: {
+    host: '0.0.0.0',
+    port: 4173,
+  },
+});
+```
+5. Configure Nginx:
+```
+server {
+  listen 80;
+  server_name db.corp.reviews;
+  return 301 https://$server_name$request_uri;
+}
+
+server {
+  listen 443 ssl;
+  server_name YOUR_DOMAIN_NAME;
+  ssl_certificate /your/letsencrypt/fullchain/key/path/fullchain.pem;
+  ssl_certificate_key /your/letsencrypt/private/key/path/.pem;privkey.pem;
+
+  location / {
+    proxy_pass http://localhost:5173;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    # WebSocket 프록시 설정 추가
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
+}
+```
+6. Set up Supabase client:
+
+Update the src/lib/supabaseClient.js file with the following code:
+```
+import { createClient } from '@supabase/supabase-js';
+
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
+```
+7. Start the development server:
 ```
 npm run dev
 ```
 
 Your application should now be running at http://localhost:5173.
+If you have an issue to access your application through local address, then try through network address instead.
 
 ## Documentation 📚
 For more information on setting up and configuring the individual components of this boilerplate, refer to the following documentation:
@@ -104,16 +157,68 @@ This project is licensed under the Creative Commons Attribution 4.0 Internationa
 
   루트 디렉토리에 `.env` 파일을 생성하고 다음 변수를 추가합니다:
 ```
-  SUPABASE_PROJECT_ID=your-supabase-project-id
-  SUPABASE_API_KEY=your-supabase-api-key
+  VITE_SUPABASE_URL=your-supabase-url
+  VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
   `your-supabase-project-id`와 `your-supabase-api-key`를 실제 Supabase 프로젝트 ID와 API 키로 대체합니다.
+4. Vite 구성:
+  `vite.config.js` 파일을 다음과 같이 업데이트합니다:
+```
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
 
-4. 개발 서버 시작:
+export default defineConfig({
+  plugins: [sveltekit()],
+  server: {
+    host: '0.0.0.0',
+    port: 4173,
+  },
+});
+```
+5. Nginx 구성:
+  다음 내용으로 `/etc/nginx/sites-available/corpreviews-db.conf Nginx` 구성 파일을 생성합니다:
+```
+server {
+  listen 80;
+  server_name db.corp.reviews;
+  return 301 https://$server_name$request_uri;
+}
+
+server {
+  listen 443 ssl;
+  server_name db.corp.reviews;
+  ssl_certificate /etc/letsencrypt/live/db.corp.reviews/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/db.corp.reviews/privkey.pem;
+
+  location / {
+    proxy_pass http://localhost:5173;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    # WebSocket 프록시 설정 추가
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
+}
+```
+6. Supabase 클라이언트 설정:
+  src/lib/supabaseClient.js 파일을 다음과 같이 업데이트합니다:
+```
+import { createClient } from '@supabase/supabase-js';
+
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
+```
+7. 개발 서버 시작:
 ```
   npm run dev
 ```
   이제 애플리케이션이 `http://localhost:5173`에서 실행되어야 합니다.
+  로컬 어드레스 접근에 문제가 발생한다면, 네트워크 주소를 이용해 어플리케이션에 접근해보세요.s
 
 ## 문서 📚
 
