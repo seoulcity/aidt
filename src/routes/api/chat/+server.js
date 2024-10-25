@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { CLOVA_STUDIO_API_URL, CLOVA_STUDIO_API_KEY, CLOVA_STUDIO_APIGW_KEY } from '$env/static/private';
 
 export async function POST({ request }) {
-  const { userMessage } = await request.json();
+  const { systemPrompt, userMessage } = await request.json();
 
   try {
     const response = await fetch(CLOVA_STUDIO_API_URL, {
@@ -15,12 +15,12 @@ export async function POST({ request }) {
       },
       body: JSON.stringify({
         messages: [
-          { role: 'system', content: '' },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
         ],
         topP: 0.8,
         topK: 0,
-        maxTokens: 256,
+        maxTokens: 512,
         temperature: 0.5,
         repeatPenalty: 5.0,
         stopBefore: [],

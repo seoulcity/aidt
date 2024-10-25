@@ -37,6 +37,7 @@
 	<header class="mb-8">
 		<h1 class="text-4xl font-bold mb-4">CLOVA Studio Chat</h1>
 		<p class="text-xl text-gray-600">CLOVA Studio API를 사용한 간단한 채팅 인터페이스입니다.</p>
+		<a href="/writing-correction" class="text-blue-500 hover:underline">영작문 교정기로 이동</a>
 	</header>
 
 	<div id="chat-container" class="bg-white rounded-lg shadow-md p-6 mb-4 h-96 overflow-y-auto">

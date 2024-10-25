@@ -1,10 +1,10 @@
-export async function chatCompletion(userMessage) {
+export async function chatCompletion(systemPrompt, userMessage) {
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ userMessage }),
+    body: JSON.stringify({ systemPrompt, userMessage }),
   });
 
   if (!response.ok) {
