@@ -1,84 +1,76 @@
 <!-- src/routes/+page.svelte -->
 
 <script>
-	// Uncomment the following section after configuring Supabase
-	// export let data;
+  import { chatCompletion } from '$lib/clovaStudioService';
+  import { onMount } from 'svelte';
+
+  let userInput = '';
+  let chatHistory = [];
+  let isLoading = false;
+
+  async function handleSubmit() {
+    if (!userInput.trim()) return;
+
+    isLoading = true;
+    chatHistory = [...chatHistory, { role: 'user', content: userInput }];
+    const userMessage = userInput;
+    userInput = '';
+
+    try {
+      const response = await chatCompletion(userMessage);
+      chatHistory = [...chatHistory, { role: 'assistant', content: response }];
+    } catch (error) {
+      console.error('Error:', error);
+      chatHistory = [...chatHistory, { role: 'assistant', content: '죄송합니다. 오류가 발생했습니다.' }];
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  onMount(() => {
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  });
 </script>
 
 <div class="container mx-auto px-4 py-8">
 	<header class="mb-8">
-		<h1 class="text-4xl font-bold mb-4">
-			Welcome to SvelteKit + Tailwind CSS + Supabase Boilerplate
-		</h1>
-		<p class="text-xl text-gray-600">
-			Start building your awesome application with this boilerplate!
-		</p>
+		<h1 class="text-4xl font-bold mb-4">CLOVA Studio Chat</h1>
+		<p class="text-xl text-gray-600">CLOVA Studio API를 사용한 간단한 채팅 인터페이스입니다.</p>
 	</header>
 
-	<section class="grid grid-cols-1 md:grid-cols-3 gap-8">
-		<div class="bg-white rounded-lg shadow-md p-6">
-		  <div class="w-16 h-16 mb-4">
-			<img src="/svelte.png" alt="Svelte Logo" class="object-contain w-full h-full">
-		  </div>
-		  <h2 class="text-2xl font-bold mb-2">
-			<a href="https://kit.svelte.dev/docs/introduction" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">SvelteKit</a>
-		  </h2>
-		  <p class="text-gray-600">Build fast and lightweight web applications with SvelteKit.</p>
-		</div>
-		<div class="bg-white rounded-lg shadow-md p-6">
-		  <div class="w-16 h-16 mb-4">
-			<img src="/tailwindcss.png" alt="Tailwind CSS Logo" class="object-contain w-full h-full">
-		  </div>
-		  <h2 class="text-2xl font-bold mb-2">
-			<a href="https://tailwindcss.com/docs/guides/sveltekit" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Tailwind CSS</a>
-		  </h2>
-		  <p class="text-gray-600">Rapidly build modern websites with utility-first CSS framework.</p>
-		</div>
-		<div class="bg-white rounded-lg shadow-md p-6">
-		  <div class="w-16 h-16 mb-4">
-			<img src="/supabase.png" alt="Supabase Logo" class="object-contain w-full h-full">
-		  </div>
-		  <h2 class="text-2xl font-bold mb-2">
-			<a href="https://supabase.com/docs/guides/getting-started/quickstarts/sveltekit" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Supabase</a>
-		  </h2>
-		  <p class="text-gray-600">Seamlessly integrate backend and database management with Supabase.</p>
-		</div>
-	  </section>
+	<div id="chat-container" class="bg-white rounded-lg shadow-md p-6 mb-4 h-96 overflow-y-auto">
+		{#each chatHistory as message}
+			<div class={`mb-4 ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
+				<span class={`inline-block p-2 rounded-lg ${message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
+					{message.content}
+				</span>
+			</div>
+		{/each}
+		{#if isLoading}
+			<div class="text-center">
+				<span class="inline-block p-2 bg-gray-200 text-gray-800 rounded-lg">응답을 생성 중입니다...</span>
+			</div>
+		{/if}
+	</div>
 
-	<!-- Uncomment the following section after configuring Supabase -->
-	<!--
-	<section class="mt-8">
-		<h2 class="text-2xl font-bold mb-4">Countries</h2>
-		<ul class="list-none">
-			{#each data.countries as country}
-				<li class="py-2">{country.name}</li>
-			{/each}
-		</ul>
-	</section>
-	 -->
+	<form on:submit|preventDefault={handleSubmit} class="flex">
+		<input
+			type="text"
+			bind:value={userInput}
+			placeholder="메시지를 입력하세요..."
+			class="flex-grow p-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+		/>
+		<button
+			type="submit"
+			class="bg-blue-500 text-white p-2 rounded-r-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+			disabled={isLoading}
+		>
+			전송
+		</button>
+	</form>
 </div>
 
-<footer class="mt-8 text-center">
-	<p class="text-gray-600">
-		View the source code on <a
-			href="https://github.com/seoulcity/sveltekit_tailwindcss_supabase_bolierplate"
-			target="_blank"
-			rel="noopener noreferrer"
-			class="text-blue-600 hover:underline">GitHub</a
-		>
-	</p>
-	<p class="text-gray-600 text-sm mt-2">
-		&copy; 2023 Kim JungHyun (<a
-			href="https://linkedin.com/in/seoulite"
-			target="_blank"
-			rel="noopener noreferrer"
-			class="text-blue-600 hover:underline">LinkedIn</a
-		>) | Licensed under
-		<a
-			href="https://creativecommons.org/licenses/by/4.0/"
-			target="_blank"
-			rel="noopener noreferrer"
-			class="text-blue-600 hover:underline">CC BY 4.0</a
-		>
-	</p>
-</footer>
+<style>
+	/* 여기에 필요한 스타일을 추가하세요 */
+</style>
