@@ -1,3 +1,4 @@
+<!-- src/routes/writing-correction/+page.svelte -->
 <script>
   import { chatCompletion } from '$lib/clovaStudioService';
   import { onMount } from 'svelte';

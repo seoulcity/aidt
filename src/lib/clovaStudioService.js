@@ -1,3 +1,4 @@
+// src/lib/clovaStudioService.js
 export async function chatCompletion(systemPrompt, userMessage) {
   const response = await fetch('/api/chat', {
     method: 'POST',
@@ -8,7 +9,8 @@ export async function chatCompletion(systemPrompt, userMessage) {
   });
 
   if (!response.ok) {
-    throw new Error('API 요청 실패');
+    const data = await response.json();
+    throw new Error(data.error || 'API 요청 실패');
   }
 
   const data = await response.json();
