@@ -193,6 +193,15 @@
       const validationResult = response.includes('판단: 1');
       if (validationResult) {
         console.log('Validation passed, generating press release...');
+        // 보도자료 생성 시작 메시지 추가
+        const generatingMessage = '✨ 모든 정보가 수집되었습니다. 보도자료를 생성하고 있습니다...';
+        await saveMessage('assistant', generatingMessage);
+        conversationHistory = [...conversationHistory, {
+          type: 'assistant',
+          content: generatingMessage,
+          session_id: currentSessionId
+        }];
+        
         const allInput = conversationHistory
           .filter(item => item.type === 'user')
           .map(item => item.content)
@@ -201,6 +210,15 @@
         const pressRelease = await generatePressRelease(allInput);
         finalPressRelease = pressRelease;
         isComplete = true;
+
+        // 생성 완료 메시지 추가
+        const completionMessage = '✅ 보도자료가 생성되었습니다. 아래에서 확인하실 수 있습니다.';
+        await saveMessage('assistant', completionMessage);
+        conversationHistory = [...conversationHistory, {
+          type: 'assistant',
+          content: completionMessage,
+          session_id: currentSessionId
+        }];
       }
 
       userInput = '';
@@ -359,7 +377,6 @@
               </div>
             </div>
           {:else if item.type === 'assistant'}
-            <!-- AI 응답 -->
             <div class="flex flex-col space-y-2">
               <div class="bg-gray-100 p-4 rounded-lg max-w-[80%]">
                 {#if item.content && item.content.includes('분석 결과:')}
@@ -383,8 +400,8 @@
                       {/if}
                     </p>
                   </div>
-                  <!-- 질문 바로 아래 입력창 -->
-                  {#if index === conversationHistory.length - 1 && !isComplete}
+                  <!-- 입력창 조건 수정 -->
+                  {#if index === conversationHistory.length - 1 && !isComplete && !item.content.includes('✨') && !item.content.includes('✅')}
                     <div class="mt-4">
                       <div class="flex gap-2">
                         <textarea
@@ -403,6 +420,23 @@
                       </div>
                     </div>
                   {/if}
+                {:else if item.content.includes('✨')}
+                  <!-- 보도자료 생성 중 메시지 -->
+                  <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3">
+                    <p class="text-sm text-gray-600 font-medium">{item.content}</p>
+                    <div class="mt-2">
+                      <div class="animate-pulse flex space-x-4">
+                        <div class="h-2 bg-yellow-400 rounded w-24"></div>
+                        <div class="h-2 bg-yellow-400 rounded w-16"></div>
+                        <div class="h-2 bg-yellow-400 rounded w-20"></div>
+                      </div>
+                    </div>
+                  </div>
+                {:else if item.content.includes('✅')}
+                  <!-- 생성 완료 메시지 -->
+                  <div class="bg-green-50 border-l-4 border-green-400 p-3">
+                    <p class="text-sm text-gray-600 font-medium">{item.content}</p>
+                  </div>
                 {:else}
                   <p class="whitespace-pre-wrap">{item.content}</p>
                 {/if}
