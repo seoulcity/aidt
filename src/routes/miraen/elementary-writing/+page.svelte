@@ -1,32 +1,44 @@
 <script>
+  import { elementaryExamples, elementaryTasks, systemPromptTemplate } from '$lib/examples/elementaryExamples';
   import WritingTask from '$lib/components/WritingTask.svelte';
 
-  const writingTaskData = {
-    title: "Let's Write 2",
-    description: "빈칸을 포함한 문단이 주어집니다. 빈칸을 채워 문장/문단을 완성하세요.",
-    systemPrompt: `당신은 초등학생을 위한 AI 영어 작문 튜터입니다.
-다음 두 가지 기준으로 평가해주세요:
-1. 맥락 (빈칸 작성의 내용 적절성)
-2. 정확성 (띄어쓰기, 스펠링, 문법, 대/소문자)`,
-    taskPrompt: `My name is **Liam**.
-I'm from **Canada**.
-I like **sports**.
-I can **play soccer** well.
+  let activeTab = 'name';
 
-각 빈칸을 채워 자연스러운 문단을 만드세요.`,
-    examples: [
-      {
-        id: 1,
-        answer: "My name is Jihun.\nI'm from Korea.\nI like music.\nI can play piano well.",
-        evaluation: "맥락 O, 정확성 O"
-      },
-      {
-        id: 2,
-        answer: "My name is 지훈.\nI'm from korea.\nI like musics.\nI can to play piano well.",
-        evaluation: "맥락 O, 정확성 X"
-      }
-    ]
-  };
+  function getTaskData(type) {
+    const task = elementaryTasks[type];
+    return {
+      title: task.title,
+      description: `주어진 문장의 빈칸을 채워 완성하세요. (${task.form})`,
+      problem: task.sentence,
+      systemPrompt: `${systemPromptTemplate}
+
+현재 평가할 문장: ${task.sentence}
+정답 형태: ${task.form}
+
+다음 예시들을 참고하여 피드백을 제공하세요:
+
+${elementaryExamples[type].map((ex, idx) => `예시${ex.id})
+답안: "${ex.answer}"
+평가: ${ex.evaluation}
+피드백: "${ex.feedback}"
+`).join('\n')}`,
+      taskPrompt: `문제: ${task.sentence}
+정답 형태: ${task.form}
+
+예시 답안들과 평가 기준을 참고하여 학생의 답안을 평가해주세요.`,
+      examples: elementaryExamples[type],
+      evaluationAreas: [
+        {
+          name: '종합',
+          label: '평가하기',
+          color: 'blue',
+          prompt: `평가 기준:
+1. 맥락 (문장의 의미가 자연스러운가)
+2. 정확성 (철자, 띄어쓰기, 구두점, 대소문자, 문법)`
+        }
+      ]
+    };
+  }
 </script>
 
 <div class="container mx-auto px-4 py-8">
@@ -35,5 +47,24 @@ I can **play soccer** well.
     <a href="/" class="text-blue-500 hover:underline mb-4 inline-block">← 홈으로 돌아가기</a>
   </header>
 
-  <WritingTask {...writingTaskData} />
+  <div class="mb-6">
+    <div class="border-b border-gray-200">
+      <nav class="-mb-px flex flex-wrap">
+        {#each Object.entries(elementaryTasks) as [type, task]}
+          <button
+            class={`py-2 px-4 border-b-2 font-medium text-sm ${
+              activeTab === type
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            } mr-4`}
+            on:click={() => (activeTab = type)}
+          >
+            {task.title}
+          </button>
+        {/each}
+      </nav>
+    </div>
+  </div>
+
+  <WritingTask {...getTaskData(activeTab)} taskType="elementary" />
 </div> 
