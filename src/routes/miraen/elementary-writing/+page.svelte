@@ -1,6 +1,7 @@
 <script>
   import { elementaryExamples, elementaryTasks, systemPromptTemplate } from '$lib/examples/elementaryExamples';
   import WritingTask from '$lib/components/WritingTask.svelte';
+  import BrandingBeta from '$lib/components/BrandingBeta.svelte';
 
   let activeTab = 'name';
 
@@ -44,6 +45,9 @@ ${elementaryExamples[type].map((ex, idx) => `예시${ex.id})
 <div class="container mx-auto px-4 py-8">
   <header class="mb-8">
     <h1 class="text-3xl font-bold text-center">초등 영어 쓰기 활동 평가</h1>
+    <div class="text-center mt-2 mb-4">
+      <BrandingBeta />
+    </div>
     <a href="/" class="text-blue-500 hover:underline mb-4 inline-block">← 홈으로 돌아가기</a>
   </header>
 
