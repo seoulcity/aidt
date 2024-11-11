@@ -12,3 +12,5 @@ vite.config.ts.timestamp-*
 *.ipynb
 files/
 nohup.out
+# Embedding data
+static/embeddings/
