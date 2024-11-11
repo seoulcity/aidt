@@ -16,6 +16,7 @@ const outputParser = StructuredOutputParser.fromZodSchema(
     }),
     nextQuestion: z.string(),
     isComplete: z.boolean().describe("모든 필수 정보가 충분히 수집되었는지 여부"),
+    judgment: z.enum(['0', '1']).describe("정보 수집 완료 여부 (1: 완료, 0: 미완료)")
   })
 );
 
@@ -54,8 +55,11 @@ const INITIAL_VALIDATION_TEMPLATE = `당신은 보도자료 작성을 위한 전
 
 {format_instructions}
 
-각 항목이 "미정"인 경우는 해당 정보가 불충분하다는 의미입니다.
-isComplete는 모든 필수 정보가 충분히 수집되었을 때만 true로 설정하세요.`;
+응답 작성 규칙:
+1. 각 항목이 "미정" 또는 불충분한 경우 해당 정보가 부족하다는 의미입니다.
+2. isComplete는 모든 필수 정보가 충분히 수집되었을 때만 true로 설정하세요.
+3. judgment는 반드시 '0' 또는 '1'로만 설정하며, isComplete가 true일 때 '1', false일 때 '0'입니다.
+4. nextQuestion은 부족한 정보를 얻기 위한 구체적인 질문을 작성하세요.`;
 
 export async function validatePressReleaseInput(userInput, conversationHistory = '') {
     try {
@@ -75,6 +79,7 @@ export async function validatePressReleaseInput(userInput, conversationHistory =
         let parsedResponse;
         try {
             parsedResponse = await outputParser.parse(response);
+            parsedResponse.judgment = parsedResponse.isComplete ? '1' : '0';
         } catch (parseError) {
             console.error('Error parsing response:', parseError);
             return formatFallbackResponse(response);
@@ -88,7 +93,7 @@ export async function validatePressReleaseInput(userInput, conversationHistory =
 }
 
 function formatResponse(parsedResponse) {
-    const { analysis, nextQuestion, isComplete } = parsedResponse;
+    const { analysis, nextQuestion, isComplete, judgment } = parsedResponse;
     
     return `분석 결과:
 - 주제/제목: ${analysis.title}
@@ -101,12 +106,30 @@ function formatResponse(parsedResponse) {
 다음 질문:
 ${nextQuestion}
 
-판단: ${isComplete ? '1' : '0'}`;
+판단: ${judgment}`;
 }
 
 function formatFallbackResponse(response) {
-    const hasJudgment = response.includes('판단: 1');
-    return response + (response.includes('판단:') ? '' : `\n\n판단: ${hasJudgment ? '1' : '0'}`);
+    let judgment = '0';
+    if (response.includes('판단: 1')) {
+        judgment = '1';
+    } else if (!response.includes('판단:')) {
+        const hasAllInfo = [
+            '주제/제목:',
+            '주요 내용(What):',
+            '시기(When):',
+            '장소(Where):',
+            '관련 조직/인물(Who):',
+            '목적/의의(Why):'
+        ].every(info => response.includes(info) && !response.includes('미정'));
+        judgment = hasAllInfo ? '1' : '0';
+    }
+
+    if (!response.includes('판단:')) {
+        response += `\n\n판단: ${judgment}`;
+    }
+
+    return response;
 }
 
 export async function generatePressRelease(collectedInfo) {
