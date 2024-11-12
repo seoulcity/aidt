@@ -1,3 +1,4 @@
+// src/routes/api/embeddings/+server.js
 import { json } from '@sveltejs/kit';
 import fs from 'fs/promises';
 import path from 'path';
