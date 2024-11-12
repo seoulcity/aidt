@@ -28,6 +28,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"cookie": "^1.0.1",
 		"dotenv": "^16.4.5",
 		"pdfjs-dist": "^2.16.105"
 	}
