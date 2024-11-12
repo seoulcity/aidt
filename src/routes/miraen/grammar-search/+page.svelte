@@ -1,6 +1,7 @@
 <script>
   import BrandingBeta from '$lib/components/BrandingBeta.svelte';
   import { onMount } from 'svelte';
+  import PDFViewer from '$lib/components/PDFViewer.svelte';
 
   let formData = {
     id: '',
@@ -24,6 +25,8 @@
   let showModal = false; // 모달 표시 여부
   let isEditing = false; // 수정 모드 상태
   let editingData = null; // 수정 중인 데이터
+  let selectedFile = null;
+  let showPDFViewer = false;
 
   async function loadEmbeddings() {
     try {
@@ -155,6 +158,16 @@
       error = err.message || '수정 중 오류가 발생했습니다.';
     }
   }
+
+  function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file && file.type === 'application/pdf') {
+      selectedFile = file;
+      showPDFViewer = true;
+    } else {
+      alert('PDF 파일만 선택할 수 있습니다.');
+    }
+  }
 </script>
 
 <div class="container mx-auto px-4 py-8">
@@ -265,6 +278,57 @@
                     </button>
                 </div>
             </form>
+
+            <!-- PDF 업로드 및 뷰어 섹션 추가 -->
+            <div class="mb-8">
+                <div class="flex items-center space-x-4 mb-4">
+                    <input
+                        type="file"
+                        accept=".pdf"
+                        on:change={handleFileSelect}
+                        class="block w-full text-sm text-gray-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-full file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-blue-50 file:text-blue-700
+                            hover:file:bg-blue-100"
+                    />
+                </div>
+                
+                {#if showPDFViewer && selectedFile}
+                    <div class="pdf-container">
+                        <PDFViewer 
+                            file={selectedFile} 
+                            on:addToEmbedding={(event) => {
+                                formData.context += (formData.context ? '\n\n' : '') + event.detail.text;
+                            }}
+                            on:saveImages={async (event) => {
+                                // 이미지 저장 로직 구현
+                                try {
+                                    const response = await fetch('/api/save-images', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            images: event.detail.images,
+                                            pdfName: selectedFile.name
+                                        })
+                                    });
+                                    
+                                    if (!response.ok) throw new Error('이미지 저장 실패');
+                                    
+                                    const result = await response.json();
+                                    status = '이미지 저장 완료';
+                                    setTimeout(() => { status = ''; }, 3000);
+                                } catch (err) {
+                                    error = err.message;
+                                }
+                            }}
+                        />
+                    </div>
+                {/if}
+            </div>
 
             <!-- 임베딩 목록 -->
             <div class="mt-8">
@@ -433,4 +497,4 @@
             </div>
         </div>
     </div>
-{/if} 
+{/if}
