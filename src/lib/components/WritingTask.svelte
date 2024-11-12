@@ -38,7 +38,7 @@
     isLoading = true;
     try {
       const response = await chatCompletion(systemPrompt, 
-        `${taskPrompt}\n\n학생 답안: ${userInput}`);
+        `${taskPrompt}\n\n학생 안: ${userInput}`);
       result = response;
       lastEvaluatedInput = userInput;
     } catch (error) {
@@ -179,10 +179,20 @@
     ></textarea>
   </div>
 
-  {#if currentExample}
+  {#if currentExample && userInput === currentExample.answer}
     <div class="mb-6 p-4 bg-gray-50 rounded">
-      <h4 class="font-bold mb-2">채점 기준 부합 여부:</h4>
-      <p class="text-gray-600">{currentExample.evaluation}</p>
+      <h4 class="font-bold mb-2">예시 답안의 채점 기준 부합 여부</h4>
+      <div class="text-gray-600 mb-2">{currentExample.evaluation}</div>
+      <div class="text-sm text-gray-500 mt-2">
+        <p class="italic">* 이는 예시 {currentExample.id}번 답안에 대해 사전에 정의된 평가 결과입니다</p>
+      </div>
+    </div>
+  {:else if currentExample}
+    <div class="mb-6 p-4 bg-yellow-50 rounded">
+      <div class="text-sm text-yellow-700">
+        <p>* 예시 답안이 수정되어 사전 정의된 평가 결과를 확인할 수 없습니다</p>
+        <p>* 평가하기 버튼을 눌러 AI 평가를 받아보세요</p>
+      </div>
     </div>
   {/if}
 
@@ -214,22 +224,61 @@
     </div>
   {:else if result}
     <div class="mt-6">
-      <h4 class="font-bold mb-2 text-xl text-blue-700">AI 평가 결과:</h4>
-      <div class="bg-gray-50 p-4 rounded whitespace-pre-wrap">
-        {result}
-      </div>
-
-      {#if currentExample?.feedback}
-        <div class="mt-4">
-          <h4 class="font-bold mb-2">희망 피드백:</h4>
-          <div class="bg-gray-50 p-4 rounded whitespace-pre-wrap border-l-4 border-blue-500">
-            {currentExample.feedback}
-          </div>
+      <h4 class="font-bold mb-4 text-xl text-blue-700">평가 결과</h4>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- AI 평가 결과 -->
+        <div class="space-y-4">
+          <h5 class="font-semibold text-blue-800 mb-2">AI 평가</h5>
+          {#if result.includes('평가:')}
+            {@const [beforeEval, ...rest] = result.split('평가:')}
+            {@const [evaluation, ...remaining] = rest.join('평가:').split('피드백:')}
+            
+            {#if beforeEval.trim()}
+              <div class="bg-gray-50 p-4 rounded whitespace-pre-wrap">
+                {beforeEval}
+              </div>
+            {/if}
+            
+            <div class="bg-blue-50 p-4 rounded">
+              <h6 class="font-semibold text-blue-800 mb-2">평가</h6>
+              <div class="whitespace-pre-wrap">{evaluation}</div>
+            </div>
+            
+            {#if remaining.length > 0}
+              <div class="bg-green-50 p-4 rounded">
+                <h6 class="font-semibold text-green-800 mb-2">피드백</h6>
+                <div class="whitespace-pre-wrap">{remaining.join('피드백:')}</div>
+              </div>
+            {/if}
+          {:else}
+            <div class="bg-gray-50 p-4 rounded whitespace-pre-wrap">
+              {result}
+            </div>
+          {/if}
         </div>
-      {/if}
+
+        <!-- 희망 피드백 -->
+        {#if currentExample?.feedback}
+          <div class="space-y-4">
+            <h5 class="font-semibold text-purple-800 mb-2">희망 피드백</h5>
+            <div class="bg-purple-50 p-4 rounded whitespace-pre-wrap border-l-4 border-purple-300">
+              <div class="mb-2 text-sm text-purple-600">
+                예시 {currentExample.id}번 답안에 대한 희망 피드백
+              </div>
+              <div class="text-purple-900">
+                {currentExample.feedback}
+              </div>
+            </div>
+            <div class="text-sm text-gray-500">
+              <p class="italic mb-1">* 이는 사전에 준비된 예시 답안에 대한 희망 피드백입니다</p>
+              <p>* AI 평가와 비교하여 참고해 주세요</p>
+            </div>
+          </div>
+        {/if}
+      </div>
     </div>
 
-    <div class="mt-4">
+    <div class="mt-6">
       {#if currentExample?.id === 1}
         <div class="text-gray-500 text-center mb-2">
           이미 정답인 예시입니다. 다른 예시를 선택하여 수정된 문장을 확인해보세요.
