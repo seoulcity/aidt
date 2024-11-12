@@ -1,3 +1,4 @@
+<!-- src/routes/miraen/grammar-search/+page.svelte -->
 <script>
   import BrandingBeta from '$lib/components/BrandingBeta.svelte';
   import { onMount } from 'svelte';

@@ -1,3 +1,4 @@
+// src/lib/utils/embedding.js
 import { EMB_V2_API_KEY, EMB_V2_API_URL, EMB_REQUEST_ID } from '$env/static/private';
 
 export async function generateEmbedding(text) {

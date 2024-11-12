@@ -1,3 +1,4 @@
+<!-- src/routes/miraen/common-writing/ParagraphTask.svelte -->
 <script>
   import WritingTask from '$lib/components/WritingTask.svelte';
   import { paragraphExamples, generateParagraphPrompt } from '$lib/examples/paragraphExamples';

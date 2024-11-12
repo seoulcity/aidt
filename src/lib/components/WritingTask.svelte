@@ -1,3 +1,4 @@
+<!-- src/lib/components/WritingTask.svelte -->
 <script>
   import { chatCompletion } from '$lib/clovaStudioService';
   import { modelAnswers } from '$lib/examples/modelAnswers';

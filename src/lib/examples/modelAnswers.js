@@ -1,3 +1,4 @@
+// src/lib/examples/modelAnswers.js
 export const modelAnswers = {
   sentence: [
     "Claire is the girl who is riding a red bike.",

@@ -1,3 +1,4 @@
+// src/lib/examples/paragraphExamples.js
 export const paragraphExamples = [
   {
     id: 1,

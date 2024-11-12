@@ -1,3 +1,4 @@
+<!-- src/routes/miraen/elementary-writing/+page.svelte -->
 <script>
   import { elementaryExamples, elementaryTasks, systemPromptTemplate } from '$lib/examples/elementaryExamples';
   import WritingTask from '$lib/components/WritingTask.svelte';

@@ -1,3 +1,4 @@
+// src/lib/examples/elementaryExamples.js
 export const elementaryExamples = {
   name: [
     {

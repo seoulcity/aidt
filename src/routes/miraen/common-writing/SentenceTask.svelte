@@ -1,3 +1,4 @@
+<!-- src/routes/miraen/common-writing/SentenceTask.svelte -->
 <script>
   import WritingTask from '$lib/components/WritingTask.svelte';
   import { sentenceExamples, generateSentencePrompt } from '$lib/examples/sentenceExamples';

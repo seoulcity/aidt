@@ -1,3 +1,4 @@
+// src/lib/examples/sentenceExamples.js
 export const sentenceExamples = [
   {
     id: 1,

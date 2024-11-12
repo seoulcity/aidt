@@ -1,3 +1,4 @@
+<!-- src/lib/components/PDFViewer.svelte -->
 <script>
   import { onMount, createEventDispatcher } from 'svelte';
   import { browser } from '$app/environment';

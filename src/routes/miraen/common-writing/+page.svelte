@@ -1,3 +1,4 @@
+<!-- src/routes/miraen/common-writing/+page.svelte -->
 <script>
   import BrandingBeta from '$lib/components/BrandingBeta.svelte';
   import SentenceTask from './SentenceTask.svelte';
