@@ -3,6 +3,7 @@
   import { onMount, createEventDispatcher } from 'svelte';
   import { browser } from '$app/environment';
   import * as pdfjsLib from 'pdfjs-dist';
+  import { PDFExtractor } from '$lib/utils/PDFExtractor';
   
   const dispatch = createEventDispatcher();
   
@@ -15,6 +16,8 @@
   let scale = 1.5;
   let pageElements = []; // 페이지의 텍스트와 이미지 요소들
   let selectedElements = []; // 선택된 요소들
+  let extractionType = 'text'; // 'text', 'tables', 'images'
+  const pdfExtractor = new PDFExtractor();
   
   if (browser) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;
@@ -206,6 +209,29 @@
     paragraph.width = maxX - paragraph.x;
     paragraph.height = maxY - paragraph.y;
   }
+  
+  async function extractContent() {
+    if (!file) return;
+    
+    try {
+      const result = await pdfExtractor.extractPDF(file, extractionType);
+      
+      if (result.success) {
+        // 추출된 내용을 context에 추가
+        dispatch('addToEmbedding', {
+          text: result.content
+        });
+        
+        if (extractionType === 'images') {
+          dispatch('saveImages', {
+            images: result.images
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Content extraction failed:', error);
+    }
+  }
 </script>
 
 <div class="pdf-viewer">
@@ -308,6 +334,46 @@
       </div>
     </div>
   {/if}
+  
+  <!-- 추출 타입 선택 컨트롤 추가 -->
+  <div class="mb-4 flex items-center space-x-4">
+    <label class="inline-flex items-center">
+      <input
+        type="radio"
+        bind:group={extractionType}
+        value="text"
+        class="form-radio"
+      />
+      <span class="ml-2">텍스트</span>
+    </label>
+    
+    <label class="inline-flex items-center">
+      <input
+        type="radio"
+        bind:group={extractionType}
+        value="tables"
+        class="form-radio"
+      />
+      <span class="ml-2">표</span>
+    </label>
+    
+    <label class="inline-flex items-center">
+      <input
+        type="radio"
+        bind:group={extractionType}
+        value="images"
+        class="form-radio"
+      />
+      <span class="ml-2">이미지</span>
+    </label>
+    
+    <button
+      on:click={extractContent}
+      class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+    >
+      선택 내용 추출
+    </button>
+  </div>
 </div>
 
 <style>

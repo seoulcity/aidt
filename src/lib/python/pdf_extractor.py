@@ -1,3 +1,4 @@
+# src/lib/python/pdf_extractor.py
 import sys
 import pymupdf4llm
 import json

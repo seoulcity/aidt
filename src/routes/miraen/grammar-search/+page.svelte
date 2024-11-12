@@ -28,6 +28,7 @@
   let editingData = null; // 수정 중인 데이터
   let selectedFile = null;
   let showPDFViewer = false;
+  let activeTab = 'manual'; // 'manual' 또는 'file'
 
   async function loadEmbeddings() {
     try {
@@ -207,168 +208,185 @@
                 </div>
             {/if}
 
-            <!-- 임베딩 생성 폼 -->
-            <form on:submit|preventDefault={handleSubmit} class="space-y-6 bg-white p-6 rounded-lg shadow-md mb-8">
-                <div class="grid grid-cols-2 gap-6">
-                    <div>
-                        <label for="embedding-id" class="block text-sm font-medium text-gray-700">ID</label>
-                        <div id="embedding-id" class="mt-1 block w-full py-2 px-3 bg-gray-100 rounded-md">
-                            {formData.id}
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label for="textbook" class="block text-sm font-medium text-gray-700">교과서명</label>
-                        <input id="textbook" type="text" bind:value={formData.textbook} class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required />
-                    </div>
-
-                    <div>
-                        <label for="school-level" class="block text-sm font-medium text-gray-700">학교급</label>
-                        <select id="school-level" bind:value={formData.schoolLevel} class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                            <option>초등학교</option>
-                            <option>중학교</option>
-                            <option>고등학교</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="grade" class="block text-sm font-medium text-gray-700">학년</label>
-                        <select id="grade" bind:value={formData.grade} class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                            <option>1</option>
-                            <option>2</option>
-                            <option>3</option>
-                            <option>4</option>
-                            <option>5</option>
-                            <option>6</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="unit" class="block text-sm font-medium text-gray-700">단원</label>
-                        <input id="unit" type="text" bind:value={formData.unit} class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required />
-                    </div>
-
-                    <div>
-                        <label for="topic" class="block text-sm font-medium text-gray-700">주제</label>
-                        <input id="topic" type="text" bind:value={formData.topic} class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required />
-                    </div>
-                </div>
-
-                <div>
-                    <label for="context" class="block text-sm font-medium text-gray-700">내용 (Context)</label>
-                    <textarea
-                        id="context"
-                        bind:value={formData.context}
-                        rows="6"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                        required
-                    ></textarea>
-                </div>
-
-                <div class="flex justify-end">
+            <!-- 탭 네비게이션 수정 -->
+            <div class="mb-6 border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                     <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        class="inline-flex justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                        {activeTab === 'manual' 
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+                        on:click={() => activeTab = 'manual'}
                     >
-                        {#if isSubmitting}
-                            처리 중...
-                        {:else}
-                            임베딩 생성
-                        {/if}
+                        직접 입력
                     </button>
-                </div>
-            </form>
-
-            <!-- PDF 업로드 및 뷰어 섹션 추가 -->
-            <div class="mb-8">
-                <div class="flex items-center space-x-4 mb-4">
-                    <input
-                        type="file"
-                        accept=".pdf"
-                        on:change={handleFileSelect}
-                        class="block w-full text-sm text-gray-500
-                            file:mr-4 file:py-2 file:px-4
-                            file:rounded-full file:border-0
-                            file:text-sm file:font-semibold
-                            file:bg-blue-50 file:text-blue-700
-                            hover:file:bg-blue-100"
-                    />
-                </div>
-                
-                {#if showPDFViewer && selectedFile}
-                    <div class="pdf-container">
-                        <PDFViewer 
-                            file={selectedFile} 
-                            on:addToEmbedding={(event) => {
-                                formData.context += (formData.context ? '\n\n' : '') + event.detail.text;
-                            }}
-                            on:saveImages={async (event) => {
-                                // 이미지 저장 로직 구현
-                                try {
-                                    const response = await fetch('/api/save-images', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({
-                                            images: event.detail.images,
-                                            pdfName: selectedFile.name
-                                        })
-                                    });
-                                    
-                                    if (!response.ok) throw new Error('이미지 저장 실패');
-                                    
-                                    const result = await response.json();
-                                    status = '이미지 저장 완료';
-                                    setTimeout(() => { status = ''; }, 3000);
-                                } catch (err) {
-                                    error = err.message;
-                                }
-                            }}
-                        />
-                    </div>
-                {/if}
+                    <button
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                        {activeTab === 'file'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+                        on:click={() => activeTab = 'file'}
+                    >
+                        파일 업로드
+                    </button>
+                    <button
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                        {activeTab === 'list'
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+                        on:click={() => activeTab = 'list'}
+                    >
+                        데이터 목록
+                    </button>
+                </nav>
             </div>
 
-            <!-- 임베딩 목록 -->
-            <div class="mt-8">
-                <h2 class="text-xl font-bold mb-4">임베딩 목록</h2>
-                <div class="grid gap-4">
-                    {#each embeddings as embedding (embedding.id)}
-                        <div 
-                            class="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
-                        >
-                            <div class="flex justify-between items-start">
-                                <div class="cursor-pointer" on:click={() => showEmbeddingDetails(embedding)}>
-                                    <h3 class="font-semibold">ID: {embedding.id}</h3>
-                                    <p class="text-sm text-gray-600">교과서: {embedding.textbook}</p>
-                                    <p class="text-sm text-gray-600">단원: {embedding.unit}</p>
-                                    <p class="text-sm text-gray-600">주제: {embedding.topic}</p>
-                                </div>
-                                <div class="flex space-x-2">
-                                    <button
-                                        on:click={() => startEditing(embedding)}
-                                        class="text-blue-600 hover:text-blue-800"
-                                    >
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                    </button>
-                                    <button
-                                        on:click={(e) => deleteEmbedding(embedding.filename, e)}
-                                        class="text-red-600 hover:text-red-800"
-                                    >
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                </div>
+            <!-- 탭 컨텐츠 수정 -->
+            {#if activeTab === 'manual'}
+                <!-- 임베딩 생성 폼 -->
+                <form on:submit|preventDefault={handleSubmit} class="space-y-6 bg-white p-6 rounded-lg shadow-md mb-8">
+                    <div class="grid grid-cols-2 gap-6">
+                        <div>
+                            <label for="embedding-id" class="block text-sm font-medium text-gray-700">ID</label>
+                            <div id="embedding-id" class="mt-1 block w-full py-2 px-3 bg-gray-100 rounded-md">
+                                {formData.id}
                             </div>
                         </div>
-                    {/each}
+                        
+                        <div>
+                            <label for="textbook" class="block text-sm font-medium text-gray-700">교과서명</label>
+                            <input id="textbook" type="text" bind:value={formData.textbook} class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required />
+                        </div>
+
+                        <div>
+                            <label for="school-level" class="block text-sm font-medium text-gray-700">학교급</label>
+                            <select id="school-level" bind:value={formData.schoolLevel} class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option>초등학교</option>
+                                <option>중학교</option>
+                                <option>고등학교</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="grade" class="block text-sm font-medium text-gray-700">학년</label>
+                            <select id="grade" bind:value={formData.grade} class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option>4</option>
+                                <option>5</option>
+                                <option>6</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="unit" class="block text-sm font-medium text-gray-700">단원</label>
+                            <input id="unit" type="text" bind:value={formData.unit} class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required />
+                        </div>
+
+                        <div>
+                            <label for="topic" class="block text-sm font-medium text-gray-700">주제</label>
+                            <input id="topic" type="text" bind:value={formData.topic} class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="context" class="block text-sm font-medium text-gray-700">내용 (Context)</label>
+                        <textarea
+                            id="context"
+                            bind:value={formData.context}
+                            rows="6"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            class="inline-flex justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {#if isSubmitting}
+                                처리 중...
+                            {:else}
+                                임베딩 생성
+                            {/if}
+                        </button>
+                    </div>
+                </form>
+            {:else if activeTab === 'file'}
+                <!-- PDF 업로드 및 뷰어 섹션 -->
+                <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+                    <div class="flex items-center space-x-4 mb-4">
+                        <input
+                            type="file"
+                            accept=".pdf"
+                            on:change={handleFileSelect}
+                            class="block w-full text-sm text-gray-500
+                                file:mr-4 file:py-2 file:px-4
+                                file:rounded-full file:border-0
+                                file:text-sm file:font-semibold
+                                file:bg-blue-50 file:text-blue-700
+                                hover:file:bg-blue-100"
+                        />
+                    </div>
+                    
+                    {#if showPDFViewer && selectedFile}
+                        <div class="pdf-container">
+                            <PDFViewer 
+                                file={selectedFile} 
+                                on:addToEmbedding={(event) => {
+                                    formData.context += (formData.context ? '\n\n' : '') + event.detail.text;
+                                    // 텍스트가 추가되면 직접 입력 탭으로 전환
+                                    activeTab = 'manual';
+                                }}
+                                on:saveImages={async (event) => {
+                                    // 기존 이미지 저장 로직...
+                                }}
+                            />
+                        </div>
+                    {/if}
                 </div>
-            </div>
+            {:else}
+                <!-- 데이터 목록 -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="grid gap-4">
+                        {#each embeddings as embedding (embedding.id)}
+                            <div 
+                                class="p-4 bg-gray-50 rounded-lg hover:shadow-md transition-shadow"
+                            >
+                                <div class="flex justify-between items-start">
+                                    <div class="cursor-pointer" on:click={() => showEmbeddingDetails(embedding)}>
+                                        <h3 class="font-semibold">ID: {embedding.id}</h3>
+                                        <p class="text-sm text-gray-600">교과서: {embedding.textbook}</p>
+                                        <p class="text-sm text-gray-600">단원: {embedding.unit}</p>
+                                        <p class="text-sm text-gray-600">주제: {embedding.topic}</p>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button
+                                            on:click={() => startEditing(embedding)}
+                                            class="text-blue-600 hover:text-blue-800"
+                                        >
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            on:click={(e) => deleteEmbedding(embedding.filename, e)}
+                                            class="text-red-600 hover:text-red-800"
+                                        >
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                </div>
+            {/if}
         {/if}
     </div>
 </div>

@@ -1,9 +1,10 @@
-const { spawn } = require('child_process');
-const path = require('path');
+// src/lib/utils/ServerPDFExtractor.js
+import { spawn } from 'child_process';
+import path from 'path';
 
-class PDFExtractor {
+export class PDFExtractor {
     constructor() {
-        this.pythonScript = path.join(__dirname, 'pdf_extractor.py');
+        this.pythonScript = path.join(process.cwd(), 'src', 'lib', 'python', 'pdf_extractor.py');
     }
 
     async extractPDF(pdfPath, outputPath, extractType = 'text') {
@@ -44,6 +45,4 @@ class PDFExtractor {
             });
         });
     }
-}
-
-module.exports = PDFExtractor; 
+} 
