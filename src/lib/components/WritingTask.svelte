@@ -10,6 +10,8 @@
   export let taskPrompt = '';
   export let problem = '';
   export let taskType = 'sentence';
+  export let activeTab = '';
+  export let evaluationAreas = [];
   
   let userInput = '';
   let result = '';
@@ -19,11 +21,15 @@
   let showCorrected = false;
   let correctedResult = '';
   let isLoadingCorrection = false;
+  let lastEvaluatedInput = '';
 
   function setExample(example) {
     userInput = example.answer;
     currentExample = example;
     result = '';  // 평가 결과 초기화
+    showCorrected = false;
+    correctedResult = '';
+    lastEvaluatedInput = '';
   }
 
   async function handleSubmit() {
@@ -34,6 +40,7 @@
       const response = await chatCompletion(systemPrompt, 
         `${taskPrompt}\n\n학생 답안: ${userInput}`);
       result = response;
+      lastEvaluatedInput = userInput;
     } catch (error) {
       console.error('Error:', error);
       result = '죄송합니다. 오류가 발생했습니다.';
@@ -41,6 +48,8 @@
       isLoading = false;
     }
   }
+
+  $: inputChanged = userInput !== lastEvaluatedInput;
 
   async function showCorrectedSentence() {
     if (!userInput.trim() || !result) return;
@@ -69,12 +78,19 @@
   과거 시제로 수정되었습니다.
 </div>`;
 
+      let modelAnswer = '';
+      if (taskType === 'elementary') {
+        modelAnswer = modelAnswers.elementary[activeTab]?.join(' 또는 ') || '모범 답안이 준비되지 않았습니다';
+      } else {
+        modelAnswer = modelAnswers[taskType]?.join(' 또는 ') || '모범 답안이 준비되지 않았습니다';
+      }
+
       const correctionPrompt = `
 학생 답안: ${userInput}
 
 평가 결과: ${result}
 
-모범 답안: ${modelAnswers[taskType].join(' 또는 ')}
+모범 답안: ${modelAnswer}
 
 위 내용을 바탕으로 학생 답안과 모범 답안을 비교하여 수정이 필요한 부분을 표시하고, 
 수정된 답안과 함께 수정 사항에 대한 설명을 제공해주세요.
@@ -98,6 +114,12 @@
     } finally {
       isLoadingCorrection = false;
     }
+  }
+
+  // result가 변경될 때마다 수정된 문장 보기 상태 초기화
+  $: if (result) {
+    showCorrected = false;
+    correctedResult = '';
   }
 </script>
 
@@ -166,25 +188,39 @@
 
   <button
     on:click={handleSubmit}
-    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full"
-    disabled={isLoading}
+    class={`w-full px-4 py-2 rounded flex items-center justify-center ${
+      isLoading || (!inputChanged && result)
+        ? 'bg-gray-400 cursor-not-allowed'
+        : 'bg-blue-500 hover:bg-blue-600'
+    } text-white`}
+    disabled={isLoading || (!inputChanged && result)}
   >
-    평가하기
+    {#if isLoading}
+      <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      평가 중...
+    {:else if !inputChanged && result}
+      평가 완료
+    {:else}
+      평가하기
+    {/if}
   </button>
 
   {#if isLoading}
-    <p class="mt-4">평가 중입니다...</p>
+    <div class="mt-4 text-center text-gray-600">
+      AI가 답안을 평가하고 있습니다. 잠시만 기다려주세요...
+    </div>
   {:else if result}
-    <div class="mt-6 grid grid-cols-2 gap-4">
-      <div>
-        <h4 class="font-bold mb-2">AI 평가 결과:</h4>
-        <div class="bg-gray-50 p-4 rounded whitespace-pre-wrap">
-          {result}
-        </div>
+    <div class="mt-6">
+      <h4 class="font-bold mb-2 text-xl text-blue-700">AI 평가 결과:</h4>
+      <div class="bg-gray-50 p-4 rounded whitespace-pre-wrap">
+        {result}
       </div>
-      
+
       {#if currentExample?.feedback}
-        <div>
+        <div class="mt-4">
           <h4 class="font-bold mb-2">희망 피드백:</h4>
           <div class="bg-gray-50 p-4 rounded whitespace-pre-wrap border-l-4 border-blue-500">
             {currentExample.feedback}
@@ -194,13 +230,41 @@
     </div>
 
     <div class="mt-4">
-      <button
-        class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 w-full"
-        on:click={showCorrectedSentence}
-        disabled={isLoadingCorrection}
-      >
-        수정된 문장 보기
-      </button>
+      {#if currentExample?.id === 1}
+        <div class="text-gray-500 text-center mb-2">
+          이미 정답인 예시입니다. 다른 예시를 선택하여 수정된 문장을 확인해보세요.
+        </div>
+        <button
+          class="bg-gray-400 text-white px-4 py-2 rounded w-full cursor-not-allowed"
+          disabled
+        >
+          수정된 문장 보기
+        </button>
+      {:else}
+        <button
+          class={`w-full px-4 py-2 rounded ${
+            showCorrected || isLoadingCorrection
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-green-500 hover:bg-green-600'
+          } text-white`}
+          on:click={showCorrectedSentence}
+          disabled={showCorrected || isLoadingCorrection}
+        >
+          {#if isLoadingCorrection}
+            <div class="flex items-center justify-center">
+              <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              수정된 문장 생성 중...
+            </div>
+          {:else if showCorrected}
+            수정 완료
+          {:else}
+            수정된 문장 보기
+          {/if}
+        </button>
+      {/if}
       
       {#if isLoadingCorrection}
         <p class="mt-4">수정된 문장을 생성하는 중입니다...</p>

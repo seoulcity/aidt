@@ -174,7 +174,7 @@
 
 <div class="container mx-auto px-4 py-8">
     <header class="mb-8">
-        <h1 class="text-3xl font-bold text-center">영문법 검색형 서비스</h1>
+        <h1 class="text-3xl font-bold text-center">영문법 검색형 서비스 (준비중)</h1>
         <div class="text-center mt-2 mb-4">
             <BrandingBeta />
         </div>

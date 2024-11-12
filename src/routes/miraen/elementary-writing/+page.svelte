@@ -71,5 +71,5 @@ ${elementaryExamples[type].map((ex, idx) => `예시${ex.id})
     </div>
   </div>
 
-  <WritingTask {...getTaskData(activeTab)} taskType="elementary" />
+  <WritingTask {...getTaskData(activeTab)} taskType="elementary" {activeTab} />
 </div> 
