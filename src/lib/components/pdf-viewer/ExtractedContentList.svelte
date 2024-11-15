@@ -1,4 +1,4 @@
-// src/lib/components/pdf-viewer/ExtractedContentList.svelte
+<!-- src/lib/components/pdf-viewer/ExtractedContentList.svelte -->
 <script>
   export let extractedContents = [];
   export let isVectorizing = false;
