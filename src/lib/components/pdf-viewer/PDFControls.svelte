@@ -1,3 +1,4 @@
+<!-- src/lib/components/pdf-viewer/PDFControls.svelte -->
 <script>
   import { PDFService } from '$lib/services/pdfService';
   

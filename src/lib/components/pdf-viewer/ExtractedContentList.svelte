@@ -3,7 +3,6 @@
   export let extractedContents = [];
   export let isVectorizing = false;
   
-  // Events that will be dispatched to parent
   import { createEventDispatcher } from 'svelte';
   const dispatch = createEventDispatcher();
 

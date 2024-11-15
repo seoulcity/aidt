@@ -1,6 +1,8 @@
+<!-- src/lib/components/pdf-viewer/ViewerModeControls.svelte -->
 <script>
   export let overlayDiv;
   export let currentPage;
+  export let pdfViewer;
   
   import { createEventDispatcher } from 'svelte';
   const dispatch = createEventDispatcher();

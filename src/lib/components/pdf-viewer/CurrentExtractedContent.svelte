@@ -1,3 +1,4 @@
+<!-- src/lib/components/pdf-viewer/CurrentExtractedContent.svelte -->
 <script>
   export let currentContent = null;
   

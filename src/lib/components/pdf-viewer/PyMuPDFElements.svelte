@@ -1,3 +1,4 @@
+<!-- src/lib/components/pdf-viewer/PyMuPDFElements.svelte -->
 <script>
   export let pageElements = [];
   export let extractionType = 'text';
