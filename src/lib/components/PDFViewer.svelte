@@ -6,6 +6,7 @@
   import { PDFViewerAPI } from '$lib/api/pdfViewerAPI';
   import { PDFService } from '$lib/services/pdfService';
   import ExtractedContentList from './pdf-viewer/ExtractedContentList.svelte';
+  import CurrentExtractedContent from './pdf-viewer/CurrentExtractedContent.svelte';
   
   const dispatch = createEventDispatcher();
   
@@ -89,15 +90,14 @@
     })();
   }
 
-  function confirmExtraction() {
+  function handleConfirmExtraction() {
     if (currentContent) {
-        // 배열에 새 내용 추가
-        extractedContents = [...extractedContents, currentContent];
-        currentContent = null;
+      extractedContents = [...extractedContents, currentContent];
+      currentContent = null;
     }
   }
 
-  function cancelExtraction() {
+  function handleCancelExtraction() {
     currentContent = null;
   }
 
@@ -211,7 +211,11 @@
         // PyMuPDF 모드일 경우 페이지 요소 로드 시도
         if (parsingMode === 'pymupdf') {
             try {
-                await loadPageElements();
+                pageElements = await PDFService.analyzePageElements(file, newPage);
+                selectedElements = []; // 페이지 변경 시 선택된 요소 초기화
+                if (pdfViewer) {
+                    pdfViewer.setPageElements(pageElements);
+                }
             } catch (error) {
                 console.warn('Failed to load page elements:', error);
                 pageElements = [];
@@ -229,40 +233,39 @@
     if (!file || !pdfViewer) return;
     
     try {
-        pageElements = await PDFService.analyzePageElements(file, currentPage);
-        selectedElements = []; // 페이지 변경 시 선택된 요소 초기화
-        
-        // PDFViewerAPI에 요소 정보 전달
-        pdfViewer.setPageElements(pageElements);
+        const elements = await PDFService.analyzePageElements(file, currentPage);
+        if (Array.isArray(elements)) {
+            pageElements = elements;
+            selectedElements = []; // 페이지 변경 시 선택된 요소 초기화
+            
+            // PDFViewerAPI에 요소 정보 전달
+            pdfViewer.setPageElements(pageElements);
+        } else {
+            throw new Error('Invalid page elements data');
+        }
     } catch (error) {
         console.error('Failed to load page elements:', error);
         pageElements = [];
+        selectedElements = [];
     }
   }
 
   // toggleElementSelection 함수 수정
   function toggleElementSelection(element, index) {
-    console.log('Toggle element:', element, 'type:', extractionType); // 디버깅용
-    
-    // 타입 체크 로직 수정
-    if (element.type !== extractionType) {
-        console.log('Type mismatch:', element.type, '!=', extractionType);
+    if (!element || element.type !== extractionType) {
         return;
     }
     
     // pageElements 업데이트
     pageElements = pageElements.map((el, i) => {
         if (i === index) {
-            const newSelected = !el.selected;
-            console.log('Toggling element at index:', index, 'current selected:', newSelected);
-            return { ...el, selected: newSelected };
+            return { ...el, selected: !el.selected };
         }
         return el;
     });
     
     // selectedElements 업데이트
     selectedElements = pageElements.filter(el => el.selected);
-    console.log('Selected elements:', selectedElements.length); // 디버깅용
     
     // PDFViewerAPI에 업데이트된 요소 정보 전달
     if (pdfViewer) {
@@ -526,40 +529,14 @@
 
   <!-- 우측: 추출된 내용 -->
   <div class="w-1/2">
-    <!-- 현재 추출된 내용 -->
-    {#if currentContent}
-      <div class="bg-white p-4 rounded-lg shadow mb-4">
-        <h3 class="text-lg font-semibold mb-2">새로 추출된 내용</h3>
-        <div class="mb-4">
-          <div class="text-sm text-gray-600 mb-2">
-            페이지 {currentContent.page}에서 추출된 {currentContent.type === 'text' ? '텍스트' : 
-                                                    currentContent.type === 'tables' ? '표' : '이미지'}
-          </div>
-          <div class="p-3 bg-gray-50 rounded-md max-h-60 overflow-y-auto">
-            <pre class="whitespace-pre-wrap text-sm">{currentContent.text}</pre>
-          </div>
-        </div>
-        
-        <div class="flex justify-end space-x-3">
-          <button
-            type="button"
-            on:click={cancelExtraction}
-            class="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
-          >
-            취소
-          </button>
-          <button
-            type="button"
-            on:click={confirmExtraction}
-            class="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
-          >
-            추가하기
-          </button>
-        </div>
-      </div>
-    {/if}
+    <!-- 현재 추출된 내용 컴포넌트로 교체 -->
+    <CurrentExtractedContent
+      {currentContent}
+      on:confirm={handleConfirmExtraction}
+      on:cancel={handleCancelExtraction}
+    />
 
-    <!-- 추출된 내용 목록 컴포넌트로 교체 -->
+    <!-- 추출된 내용 목록 -->
     <ExtractedContentList
       {extractedContents}
       {isVectorizing}

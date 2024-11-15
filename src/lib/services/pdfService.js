@@ -14,10 +14,19 @@ export class PDFService {
                 body: formData
             });
             
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const result = await response.json();
             
             if (!result.success) {
                 throw new Error(result.error || 'Failed to analyze page');
+            }
+            
+            // 결과가 배열인지 확인
+            if (!Array.isArray(result.elements)) {
+                throw new Error('Invalid response format');
             }
             
             return result.elements;
