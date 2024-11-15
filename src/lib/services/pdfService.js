@@ -20,19 +20,41 @@ export class PDFService {
             
             const result = await response.json();
             
+            if (result.error) {
+                if (result.error.includes('need item of full page image list')) {
+                    console.warn('Page image data not ready, retrying...');
+                    return [];
+                }
+                throw new Error(result.error);
+            }
+
             if (!result.success) {
-                throw new Error(result.error || 'Failed to analyze page');
+                return [];
+            }
+
+            if (!result.elements || !Array.isArray(result.elements)) {
+                console.warn('Invalid elements data, returning empty array');
+                return [];
             }
             
-            // 결과가 배열인지 확인
-            if (!Array.isArray(result.elements)) {
-                throw new Error('Invalid response format');
-            }
-            
-            return result.elements;
+            const validElements = result.elements.filter(element => {
+                const isValid = element && 
+                              element.type && 
+                              Array.isArray(element.bbox) && 
+                              element.bbox.length === 4;
+                
+                if (!isValid) {
+                    console.warn('Filtering out invalid element:', element);
+                }
+                
+                return isValid;
+            });
+
+            return validElements;
+
         } catch (error) {
             console.error('Failed to analyze page elements:', error);
-            throw error;
+            return [];
         }
     }
 

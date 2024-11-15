@@ -105,6 +105,9 @@ async def analyze_pdf_page(
             doc = fitz.open(str(temp_pdf))
             page = doc[page_number - 1]
             
+            # 페이지 렌더링 (이미지 데이터 준비)
+            pix = page.get_pixmap()
+            
             # 페이지의 객체들을 타입별로 수집
             elements = []
             
@@ -122,17 +125,22 @@ async def analyze_pdf_page(
                                 "size": span["size"]
                             })
             
-            # 이미지 추출
-            images = page.get_images()
+            # 이미지 추출 (페이지 렌더링 후)
+            images = page.get_images(full=True)  # full=True로 변경
             for img_index, img in enumerate(images):
                 xref = img[0]
                 bbox = page.get_image_bbox(img)
                 if bbox:
-                    elements.append({
+                    # 이미지 메타데이터 추가
+                    image_info = {
                         "type": "image",
                         "bbox": list(bbox),
-                        "xref": xref
-                    })
+                        "xref": xref,
+                        "width": img[2],  # 이미지 너비
+                        "height": img[3],  # 이미지 높이
+                        "colorspace": img[4],  # 컬러스페이스
+                    }
+                    elements.append(image_info)
             
             # 표 감지
             tables = page.find_tables()

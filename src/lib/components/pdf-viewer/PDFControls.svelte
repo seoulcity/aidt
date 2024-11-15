@@ -1,62 +1,107 @@
 <script>
-  export let currentPage;
-  export let totalPages;
-  export let pdfViewer;
-  export let isRendering;
-  export let scale = 'auto';
+  export let parsingMode = 'viewer';
+  export let extractionType = 'text';
+  export let selectedElements = [];
+  
+  import { createEventDispatcher } from 'svelte';
+  const dispatch = createEventDispatcher();
 
-  function handleScaleChange(event) {
-    pdfViewer.setScale(scale);
+  function handleParsingModeChange(event) {
+    dispatch('parsingModeChange', { mode: event.target.value });
+  }
+
+  function handleExtractionTypeChange(event) {
+    dispatch('extractionTypeChange', { type: event.target.value });
+  }
+
+  function extractSelectedElements() {
+    dispatch('extractElements');
   }
 </script>
 
-<div class="controls mb-4 flex justify-between items-center">
-  <div class="flex items-center space-x-4">
-    <button
-      type="button"
-      on:click={() => currentPage > 1 && dispatch('changePage', currentPage - 1)}
-      disabled={currentPage <= 1 || !pdfViewer || isRendering}
-      class="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
-    >
-      {#if isRendering}
-        <div class="flex items-center space-x-2">
-          <span>처리 중...</span>
-        </div>
-      {:else}
-        이전
-      {/if}
-    </button>
-    <span>페이지 {currentPage} / {totalPages}</span>
-    <button
-      type="button"
-      on:click={() => currentPage < totalPages && dispatch('changePage', currentPage + 1)}
-      disabled={currentPage >= totalPages || !pdfViewer || isRendering}
-      class="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
-    >
-      {#if isRendering}
-        <div class="flex items-center space-x-2">
-          <span>처리 중...</span>
-        </div>
-      {:else}
-        다음
-      {/if}
-    </button>
+<!-- 파싱 모드 선택 -->
+<div class="mb-4 bg-white p-4 rounded-lg shadow">
+  <h3 class="text-lg font-semibold mb-2">파싱 방식 선택</h3>
+  <div class="flex space-x-4">
+    <label class="inline-flex items-center">
+      <input
+        type="radio"
+        name="parsingMode"
+        value="viewer"
+        checked={parsingMode === 'viewer'}
+        on:change={handleParsingModeChange}
+        class="form-radio"
+      />
+      <span class="ml-2">PDF 뷰어 (수동 선택)</span>
+    </label>
+    <label class="inline-flex items-center">
+      <input
+        type="radio"
+        name="parsingMode"
+        value="pymupdf"
+        checked={parsingMode === 'pymupdf'}
+        on:change={handleParsingModeChange}
+        class="form-radio"
+      />
+      <span class="ml-2">PyMuPDF (자동 추출)</span>
+    </label>
   </div>
-  <div class="flex items-center space-x-2">
-    <label for="scale">확대/축소:</label>
-    <select
-      id="scale"
-      bind:value={scale}
-      on:change={handleScaleChange}
-      class="border rounded px-2 py-1"
-    >
-      <option value="auto">폭 맞춤</option>
-      <option value="0.5">50%</option>
-      <option value="0.75">75%</option>
-      <option value="1">100%</option>
-      <option value="1.25">125%</option>
-      <option value="1.5">150%</option>
-      <option value="2">200%</option>
-    </select>
+</div>
+
+<!-- PyMuPDF 모드 컨트롤 -->
+{#if parsingMode === 'pymupdf'}
+  <div class="mt-4 bg-white p-4 rounded-lg shadow">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center space-x-4">
+        <label class="inline-flex items-center">
+          <input
+            type="radio"
+            name="extractionType"
+            value="text"
+            checked={extractionType === 'text'}
+            on:change={handleExtractionTypeChange}
+            class="form-radio"
+          />
+          <span class="ml-2">텍스트</span>
+        </label>
+        
+        <label class="inline-flex items-center">
+          <input
+            type="radio"
+            name="extractionType"
+            value="tables"
+            checked={extractionType === 'tables'}
+            on:change={handleExtractionTypeChange}
+            class="form-radio"
+          />
+          <span class="ml-2">표</span>
+        </label>
+        
+        <label class="inline-flex items-center">
+          <input
+            type="radio"
+            name="extractionType"
+            value="images"
+            checked={extractionType === 'images'}
+            on:change={handleExtractionTypeChange}
+            class="form-radio"
+          />
+          <span class="ml-2">이미지</span>
+        </label>
+      </div>
+      
+      <button
+        type="button"
+        on:click={extractSelectedElements}
+        class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+        disabled={selectedElements.length === 0}
+      >
+        {#if selectedElements.length > 0}
+          선택된 {selectedElements.length}개 항목 추출
+        {:else}
+          추출할 항목 선택
+        {/if}
+      </button>
+    </div>
   </div>
-</div> 
+{/if} 

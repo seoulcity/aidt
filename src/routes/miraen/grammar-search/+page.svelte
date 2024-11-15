@@ -10,6 +10,7 @@
   import EmbeddingListTab from '$lib/components/grammar-search/EmbeddingListTab.svelte';
   import EmbeddingModal from '$lib/components/grammar-search/EmbeddingModal.svelte';
   import EditModal from '$lib/components/grammar-search/EditModal.svelte';
+  import PDFViewer from '$lib/components/PDFViewer.svelte';
 
   let formData = {
     id: '',
@@ -173,13 +174,24 @@
     if (file && file.type === 'application/pdf') {
       selectedFile = file;
       showPDFViewer = true;
-    } else {
+    } else if (file) {
       alert('PDF 파일만 선택할 수 있습니다.');
+      event.target.value = ''; // 파일 선택 초기화
     }
+  }
+
+  function handleCancelFile() {
+    selectedFile = null;
+    showPDFViewer = false;
+    // 파일 input 초기화
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) fileInput.value = '';
   }
 
   function handleTabChange(newTab) {
     activeTab = newTab;
+    // 탭 변경 시 showPDFViewer 상태 유지
+    // showPDFViewer는 selectedFile이 있을 때만 true
   }
 
   // PDF에서 추출한 텍스트를 임베딩 폼에 추가하는 함수
@@ -229,11 +241,47 @@
             {#if activeTab === 'manual'}
                 <ManualInputTab {formData} {isSubmitting} on:submit={handleSubmit} />
             {:else if activeTab === 'file'}
-                <FileUploadTab
-                    bind:selectedFile
-                    bind:showPDFViewer
-                    on:addToEmbedding={handleAddToEmbedding}
-                />
+                <div class="mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex-1">
+                            <input
+                                type="file"
+                                accept=".pdf"
+                                on:change={handleFileSelect}
+                                class="block w-full text-sm text-gray-500
+                                    file:mr-4 file:py-2 file:px-4
+                                    file:rounded-full file:border-0
+                                    file:text-sm file:font-semibold
+                                    file:bg-blue-50 file:text-blue-700
+                                    hover:file:bg-blue-100"
+                            />
+                        </div>
+                        {#if selectedFile}
+                            <button
+                                type="button"
+                                on:click={handleCancelFile}
+                                class="ml-4 px-4 py-2 text-sm text-red-600 hover:text-red-800"
+                            >
+                                선택 취소
+                            </button>
+                        {/if}
+                    </div>
+
+                    {#if selectedFile}
+                        <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                            <p class="text-sm text-gray-600">
+                                선택된 파일: {selectedFile.name}
+                            </p>
+                        </div>
+                    {/if}
+
+                    {#if showPDFViewer}
+                        <PDFViewer
+                            file={selectedFile}
+                            on:addToEmbedding={handleAddToEmbedding}
+                        />
+                    {/if}
+                </div>
             {:else}
                 <EmbeddingListTab
                     {embeddings}

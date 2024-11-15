@@ -7,6 +7,9 @@
   import { PDFService } from '$lib/services/pdfService';
   import ExtractedContentList from './pdf-viewer/ExtractedContentList.svelte';
   import CurrentExtractedContent from './pdf-viewer/CurrentExtractedContent.svelte';
+  import PDFControls from './pdf-viewer/PDFControls.svelte';
+  import ViewerModeControls from './pdf-viewer/ViewerModeControls.svelte';
+  import PyMuPDFElements from './pdf-viewer/PyMuPDFElements.svelte';
   
   const dispatch = createEventDispatcher();
   
@@ -100,11 +103,6 @@
   function handleCancelExtraction() {
     currentContent = null;
   }
-
-  function removeExtractedContent(index) {
-    extractedContents = extractedContents.filter((_, i) => i !== index);
-  }
-
   
   $: if (parsingMode && pdfViewer) {
     (async () => {
@@ -146,49 +144,6 @@
       }
     };
   });
-
-  // 선택 내용 추출 함수 수정
-  function extractSelectedText() {
-    const selectedTexts = Array.from(overlayDiv.querySelectorAll('.bounding-box'))
-        .filter(box => box.querySelector('input[type="checkbox"]').checked)
-        .map(box => {
-            const checkbox = box.querySelector('input[type="checkbox"]');
-            checkbox.checked = false;
-            box.style.backgroundColor = 'transparent';
-            box.style.border = '1px solid #ddd';
-            return box.dataset.text;
-        })
-        .join(' ');
-
-    if (selectedTexts) {
-        // 새로운 추출 내용을 배열에 추가
-        extractedContents = [...extractedContents, {
-            text: selectedTexts,
-            page: currentPage,
-            type: 'text',
-            timestamp: new Date().toISOString()
-        }];
-    }
-  }
-
-  // 벡터화 함수
-  async function vectorizeContents() {
-    if (extractedContents.length === 0) return;
-    
-    try {
-        isVectorizing = true;
-        const combinedText = extractedContents
-            .map(content => content.text)
-            .join('\n\n');
-        
-        dispatch('addToEmbedding', { text: combinedText });
-        extractedContents = []; // 벡터화 후 초기화
-    } catch (error) {
-        console.error('Vectorization failed:', error);
-    } finally {
-        isVectorizing = false;
-    }
-  }
 
   // 페이지 이동 시에도 현재 파싱 모드 유지
   async function changePage(newPage) {
@@ -247,29 +202,6 @@
         console.error('Failed to load page elements:', error);
         pageElements = [];
         selectedElements = [];
-    }
-  }
-
-  // toggleElementSelection 함수 수정
-  function toggleElementSelection(element, index) {
-    if (!element || element.type !== extractionType) {
-        return;
-    }
-    
-    // pageElements 업데이트
-    pageElements = pageElements.map((el, i) => {
-        if (i === index) {
-            return { ...el, selected: !el.selected };
-        }
-        return el;
-    });
-    
-    // selectedElements 업데이트
-    selectedElements = pageElements.filter(el => el.selected);
-    
-    // PDFViewerAPI에 업데이트된 요소 정보 전달
-    if (pdfViewer) {
-        pdfViewer.setPageElements(pageElements);
     }
   }
 
@@ -337,35 +269,36 @@
       isVectorizing = false;
     }
   }
+
+  function handleParsingModeChange(event) {
+    parsingMode = event.detail.mode;
+  }
+
+  function handleExtractionTypeChange(event) {
+    extractionType = event.detail.type;
+  }
+
+  function handleExtractText(event) {
+    extractedContents = [...extractedContents, event.detail];
+  }
+
+  function handleSelectionChange(event) {
+    selectedElements = event.detail.selectedElements;
+    pageElements = event.detail.pageElements;
+  }
 </script>
 
 <div class="flex gap-4">
   <!-- 좌측: PDF 뷰어 -->
   <div class="w-1/2">
-    <!-- 파싱 모드 선택 -->
-    <div class="mb-4 bg-white p-4 rounded-lg shadow">
-      <h3 class="text-lg font-semibold mb-2">파싱 방식 선택</h3>
-      <div class="flex space-x-4">
-        <label class="inline-flex items-center">
-          <input
-            type="radio"
-            bind:group={parsingMode}
-            value="viewer"
-            class="form-radio"
-          />
-          <span class="ml-2">PDF 뷰어 (수동 선택)</span>
-        </label>
-        <label class="inline-flex items-center">
-          <input
-            type="radio"
-            bind:group={parsingMode}
-            value="pymupdf"
-            class="form-radio"
-          />
-          <span class="ml-2">PyMuPDF (자동 추출)</span>
-        </label>
-      </div>
-    </div>
+    <PDFControls
+      {parsingMode}
+      {extractionType}
+      {selectedElements}
+      on:parsingModeChange={handleParsingModeChange}
+      on:extractionTypeChange={handleExtractionTypeChange}
+      on:extractElements={extractSelectedElements}
+    />
 
     <!-- PDF 뷰어 컨트롤 -->
     <div class="controls mb-4 flex justify-between items-center">
@@ -428,115 +361,33 @@
         class:hidden={parsingMode !== 'viewer'}
       ></div>
       {#if parsingMode === 'pymupdf' && pageElements}
-        <div class="absolute inset-0 pointer-events-auto z-[1]">
-          {#each pageElements as element, index}
-            <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <div
-              class="absolute transition-all duration-200 ease-in-out z-[2] hover:border-[3px] hover:bg-blue-50/5"
-              style="
-                left: {element.bbox[0]}px;
-                top: {element.bbox[1]}px;
-                width: {element.bbox[2] - element.bbox[0]}px;
-                height: {element.bbox[3] - element.bbox[1]}px;
-                border: 2px solid {element.type === extractionType ? '#4a90e2' : '#ddd'};
-                background-color: {element.selected ? 'rgba(74, 144, 226, 0.1)' : 'transparent'};
-                cursor: {element.type === extractionType ? 'pointer' : 'not-allowed'};
-              "
-              on:click={() => toggleElementSelection(element, index)}
-              role="button"
-              tabindex="0"
-            >
-              <div 
-                class="absolute -top-5 -left-0.5 text-white text-xs px-1.5 py-0.5 rounded whitespace-nowrap"
-                style="background-color: {element.type === extractionType ? '#4a90e2' : '#999'};"
-              >
-                {element.type}
-              </div>
-            </div>
-          {/each}
-        </div>
+        <PyMuPDFElements
+          {pageElements}
+          {extractionType}
+          {pdfViewer}
+          on:selectionChange={handleSelectionChange}
+        />
       {/if}
     </div>
 
     <!-- 수동 선택 모드일 때의 컨트롤 -->
     {#if parsingMode === 'viewer'}
-      <div class="mt-4 bg-white p-4 rounded-lg shadow">
-        <div class="flex justify-between items-center">
-          <span class="text-sm text-gray-600">선택한 텍스트를 추출할 수 있습니다.</span>
-          <button
-            type="button"
-            on:click={extractSelectedText}
-            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            선택 내용 추출
-          </button>
-        </div>
-      </div>
-    {/if}
-
-    <!-- PyMuPDF 모드 컨트롤 추가 -->
-    {#if parsingMode === 'pymupdf'}
-      <div class="mt-4 bg-white p-4 rounded-lg shadow">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center space-x-4">
-            <label class="inline-flex items-center">
-              <input
-                type="radio"
-                bind:group={extractionType}
-                value="text"
-                class="form-radio"
-              />
-              <span class="ml-2">텍스</span>
-            </label>
-            
-            <label class="inline-flex items-center">
-              <input
-                type="radio"
-                bind:group={extractionType}
-                value="tables"
-                class="form-radio"
-              />
-              <span class="ml-2">표</span>
-            </label>
-            
-            <label class="inline-flex items-center">
-              <input
-                type="radio"
-                bind:group={extractionType}
-                value="images"
-                class="form-radio"
-              />
-              <span class="ml-2">이미지</span>
-            </label>
-          </div>
-          
-          <button
-            type="button"
-            on:click={extractSelectedElements}
-            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-            disabled={selectedElements.length === 0}
-          >
-            {#if selectedElements.length > 0}
-              선택된 {selectedElements.length}개 항목 추출
-            {:else}
-              추출할 항목 선택
-            {/if}
-          </button>
-        </div>
-      </div>
+      <ViewerModeControls
+        {overlayDiv}
+        {currentPage}
+        on:extract={handleExtractText}
+      />
     {/if}
   </div>
 
   <!-- 우측: 추출된 내용 -->
   <div class="w-1/2">
-    <!-- 현재 추출된 내용 컴포넌트로 교체 -->
     <CurrentExtractedContent
       {currentContent}
       on:confirm={handleConfirmExtraction}
       on:cancel={handleCancelExtraction}
     />
 
-    <!-- 추출된 내용 목록 -->
     <ExtractedContentList
       {extractedContents}
       {isVectorizing}
