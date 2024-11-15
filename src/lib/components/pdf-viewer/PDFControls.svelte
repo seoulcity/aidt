@@ -1,7 +1,12 @@
 <script>
+  import { PDFService } from '$lib/services/pdfService';
+  
   export let parsingMode = 'viewer';
   export let extractionType = 'text';
   export let selectedElements = [];
+  export let file;
+  export let currentPage;
+  export let pdfViewer;
   
   import { createEventDispatcher } from 'svelte';
   const dispatch = createEventDispatcher();
@@ -14,8 +19,31 @@
     dispatch('extractionTypeChange', { type: event.target.value });
   }
 
-  function extractSelectedElements() {
-    dispatch('extractElements');
+  async function extractSelectedElements() {
+    if (!selectedElements.length) return;
+    
+    try {
+      dispatch('extractingStart');
+      
+      const content = await PDFService.extractSelectedElements(
+        file,
+        extractionType,
+        currentPage,
+        selectedElements
+      );
+      
+      dispatch('extractingComplete', {
+        content: {
+          text: content,
+          page: currentPage,
+          type: extractionType,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Extraction failed:', error);
+      dispatch('extractingError', { error });
+    }
   }
 </script>
 

@@ -11,8 +11,20 @@
     dispatch('removeContent', { index });
   }
 
-  function vectorizeContents() {
-    dispatch('vectorize');
+  async function vectorizeContents() {
+    if (extractedContents.length === 0) return;
+    
+    try {
+      dispatch('vectorizingStart');
+      const combinedText = extractedContents
+        .map(content => content.text)
+        .join('\n\n');
+      
+      dispatch('vectorize', { text: combinedText });
+    } catch (error) {
+      console.error('Vectorization failed:', error);
+      dispatch('vectorizingError', { error });
+    }
   }
 </script>
 

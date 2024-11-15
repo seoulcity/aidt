@@ -217,57 +217,34 @@
     loadPageElements();
   }
 
-  // 선택된 요소들 추출 함수 수정
-  async function extractSelectedElements() {
-    if (!selectedElements.length) return;
-    
-    try {
-        isExtracting = true;
-        
-        const content = await PDFService.extractSelectedElements(
-            file,
-            extractionType,
-            currentPage,
-            selectedElements
-        );
-        
-        extractedContents = [...extractedContents, {
-            text: content,
-            page: currentPage,
-            type: extractionType,
-            timestamp: new Date().toISOString()
-        }];
-    } catch (error) {
-        console.error('Extraction failed:', error);
-    } finally {
-        isExtracting = false;
-        selectedElements = [];
-        pageElements = pageElements.map(e => ({ ...e, selected: false }));
-        pdfViewer.setPageElements(pageElements);
-    }
+  function handleExtractingStart() {
+    isExtracting = true;
   }
 
-  function handleRemoveContent(event) {
-    const { index } = event.detail;
-    extractedContents = extractedContents.filter((_, i) => i !== index);
+  function handleExtractingComplete(event) {
+    extractedContents = [...extractedContents, event.detail.content];
+    isExtracting = false;
+    selectedElements = [];
+    pageElements = pageElements.map(e => ({ ...e, selected: false }));
+    pdfViewer.setPageElements(pageElements);
   }
 
-  async function handleVectorize() {
-    if (extractedContents.length === 0) return;
-    
-    try {
-      isVectorizing = true;
-      const combinedText = extractedContents
-        .map(content => content.text)
-        .join('\n\n');
-      
-      dispatch('addToEmbedding', { text: combinedText });
-      extractedContents = []; // 벡터화 후 초기화
-    } catch (error) {
-      console.error('Vectorization failed:', error);
-    } finally {
-      isVectorizing = false;
-    }
+  function handleExtractingError() {
+    isExtracting = false;
+  }
+
+  function handleVectorizingStart() {
+    isVectorizing = true;
+  }
+
+  function handleVectorizingComplete(event) {
+    dispatch('addToEmbedding', { text: event.detail.text });
+    extractedContents = [];
+    isVectorizing = false;
+  }
+
+  function handleVectorizingError() {
+    isVectorizing = false;
   }
 
   function handleParsingModeChange(event) {
@@ -286,6 +263,11 @@
     selectedElements = event.detail.selectedElements;
     pageElements = event.detail.pageElements;
   }
+
+  function handleRemoveContent(event) {
+    const { index } = event.detail;
+    extractedContents = extractedContents.filter((_, i) => i !== index);
+  }
 </script>
 
 <div class="flex gap-4">
@@ -295,9 +277,14 @@
       {parsingMode}
       {extractionType}
       {selectedElements}
+      {file}
+      {currentPage}
+      {pdfViewer}
       on:parsingModeChange={handleParsingModeChange}
       on:extractionTypeChange={handleExtractionTypeChange}
-      on:extractElements={extractSelectedElements}
+      on:extractingStart={handleExtractingStart}
+      on:extractingComplete={handleExtractingComplete}
+      on:extractingError={handleExtractingError}
     />
 
     <!-- PDF 뷰어 컨트롤 -->
@@ -392,7 +379,9 @@
       {extractedContents}
       {isVectorizing}
       on:removeContent={handleRemoveContent}
-      on:vectorize={handleVectorize}
+      on:vectorizingStart={handleVectorizingStart}
+      on:vectorize={handleVectorizingComplete}
+      on:vectorizingError={handleVectorizingError}
     />
   </div>
 </div>
