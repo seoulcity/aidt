@@ -15,6 +15,10 @@ export default defineConfig({
 	server: {
 		fs: {
 			strict: false
+		},
+		proxy: {
+			'/api/pdf': 'http://localhost:8000',
+			'/api/pdf/analyze': 'http://localhost:8000'
 		}
 	}
 });

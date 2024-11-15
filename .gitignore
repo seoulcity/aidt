@@ -12,5 +12,7 @@ vite.config.ts.timestamp-*
 *.ipynb
 files/
 nohup.out
+venv/
+src/__pycache__/
 # Embedding data
 static/embeddings/

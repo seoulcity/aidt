@@ -1,5 +1,5 @@
 # src/python/server.py
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import json
@@ -7,14 +7,15 @@ import os
 from pathlib import Path
 import shutil
 import pymupdf4llm
+import fitz
 
 app = FastAPI()
 
-# CORS 설정 수정
+# CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 모든 origin 허용
-    allow_credentials=False,  # credentials 비활성화
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -23,11 +24,11 @@ app.add_middleware(
 TEMP_DIR = Path("temp")
 TEMP_DIR.mkdir(exist_ok=True)
 
-@app.post("/extract")
+@app.post("/api/pdf")
 async def extract_pdf(
     file: UploadFile = File(...),
-    extract_type: str = "text",
-    page_number: int = 1  # 페이지 번호 파라미터 추가
+    extract_type: str = Form("text"),
+    page_number: int = Form(1)
 ):
     try:
         print(f"Received file: {file.filename}, type: {extract_type}, page: {page_number}")
@@ -48,7 +49,7 @@ async def extract_pdf(
             if extract_type == 'text':
                 md_text = pymupdf4llm.to_markdown(
                     str(temp_pdf),
-                    pages=[page_number - 1]  # 0-based index로 변환
+                    pages=[page_number - 1]
                 )
             elif extract_type == 'tables':
                 md_text = pymupdf4llm.to_markdown(
@@ -67,7 +68,7 @@ async def extract_pdf(
                     dpi=300
                 )
             
-            print(f"Extraction successful, content length: {len(md_text)}")
+            print(f"Extraction successful for page {page_number}")
             return {
                 "success": True,
                 "content": md_text,
@@ -87,6 +88,85 @@ async def extract_pdf(
             temp_pdf.unlink()
         if temp_output.exists():
             temp_output.unlink()
+
+@app.post("/api/pdf/analyze")
+async def analyze_pdf_page(
+    file: UploadFile = File(...),
+    page_number: int = Form(1)
+):
+    try:
+        print(f"Analyzing PDF page: {file.filename}, page: {page_number}")
+        temp_pdf = TEMP_DIR / f"input_{file.filename}"
+        
+        try:
+            with temp_pdf.open("wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            doc = fitz.open(str(temp_pdf))
+            page = doc[page_number - 1]
+            
+            # 페이지의 객체들을 타입별로 수집
+            elements = []
+            
+            # 텍스트 블록 추출
+            text_blocks = page.get_text("dict")["blocks"]
+            for block in text_blocks:
+                if block.get("type") == 0:  # 텍스트 블록
+                    for line in block.get("lines", []):
+                        for span in line.get("spans", []):
+                            elements.append({
+                                "type": "text",
+                                "bbox": span["bbox"],
+                                "text": span["text"],
+                                "font": span["font"],
+                                "size": span["size"]
+                            })
+            
+            # 이미지 추출
+            images = page.get_images()
+            for img_index, img in enumerate(images):
+                xref = img[0]
+                bbox = page.get_image_bbox(img)
+                if bbox:
+                    elements.append({
+                        "type": "image",
+                        "bbox": list(bbox),
+                        "xref": xref
+                    })
+            
+            # 표 감지
+            tables = page.find_tables()
+            for table in tables:
+                elements.append({
+                    "type": "table",
+                    "bbox": list(table.bbox),
+                    "rows": len(table.cells),
+                    "cols": len(table.cells[0]) if table.cells else 0
+                })
+            
+            print(f"Analysis successful: found {len(elements)} elements")
+            return {
+                "success": True,
+                "elements": elements,
+                "page_dims": {
+                    "width": page.rect.width,
+                    "height": page.rect.height
+                }
+            }
+            
+        finally:
+            if 'doc' in locals():
+                doc.close()
+            file.file.close()
+            if temp_pdf.exists():
+                temp_pdf.unlink()
+                
+    except Exception as e:
+        print(f"Analysis error: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 if __name__ == "__main__":
     uvicorn.run(

@@ -33,4 +33,31 @@ export class PDFExtractor {
             throw error;
         }
     }
+
+    async analyzePage(file, pageNumber) {
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('page_number', pageNumber.toString());
+
+            const response = await fetch('/api/pdf/analyze', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.error || 'Page analysis failed');
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Page analysis error:', error);
+            throw error;
+        }
+    }
 } 
