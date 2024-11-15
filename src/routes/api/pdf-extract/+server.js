@@ -4,7 +4,6 @@ import { writeFile, mkdir, readFile, rm } from 'fs/promises';
 import { PDFExtractor } from '$lib/utils/ServerPDFExtractor.js';
 import path from 'path';
 import { existsSync } from 'fs';
-import { error } from '@sveltejs/kit';
 
 export const POST = async ({ request }) => {
     let tempFilePath = null;

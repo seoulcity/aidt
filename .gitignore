@@ -16,3 +16,4 @@ venv/
 src/__pycache__/
 # Embedding data
 static/embeddings/
+server.log

@@ -1,37 +1,8 @@
 // src/lib/utils/PDFExtractor.js
 export class PDFExtractor {
-    async extractPDF(file, extractType = 'text', pageNumber = 1) {
-        try {
-            console.log('Extracting PDF:', file.name, 'Type:', extractType, 'Page:', pageNumber);
-            
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('extract_type', extractType);
-            formData.append('page_number', pageNumber.toString());
-
-            const response = await fetch('/api/pdf', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error('Server error:', response.status, errorData);
-                throw new Error(errorData.error || `Server error: ${response.status}`);
-            }
-
-            const data = await response.json();
-            console.log('Extraction response:', data);
-
-            if (!data.success) {
-                throw new Error(data.error || 'PDF extraction failed');
-            }
-
-            return data;
-        } catch (error) {
-            console.error('PDF extraction error:', error);
-            throw error;
-        }
+    constructor() {
+        this.currentFile = null;
+        this.currentPage = null;
     }
 
     async analyzePage(file, pageNumber) {
@@ -39,25 +10,73 @@ export class PDFExtractor {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('page_number', pageNumber.toString());
+            formData.append('extract_type', 'analyze');
 
-            const response = await fetch('/api/pdf/analyze', {
+            const response = await fetch('/api/pdf', {
                 method: 'POST',
                 body: formData
             });
 
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
+            const result = await response.json();
+            
+            if (!result.success) {
+                console.warn('Page analysis warning:', result.error);
+                // 오류가 발생해도 빈 배열을 반환하여 UI가 계속 작동하도록 함
+                return {
+                    success: true,
+                    elements: []
+                };
             }
 
-            const data = await response.json();
-            if (!data.success) {
-                throw new Error(data.error || 'Page analysis failed');
-            }
+            return {
+                success: true,
+                elements: result.elements || []
+            };
 
-            return data;
         } catch (error) {
             console.error('Page analysis error:', error);
-            throw error;
+            // 오류 발생시에도 빈 배열 반환
+            return {
+                success: true, // UI 흐름을 방해하지 않기 위해 success를 true로 설정
+                elements: []
+            };
+        }
+    }
+
+    async extractPDF(file, extractType, pageNumber, regions = null) {
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('extract_type', extractType);
+            formData.append('page_number', pageNumber.toString());
+            
+            if (regions) {
+                formData.append('regions', JSON.stringify(regions));
+            }
+
+            const response = await fetch('/api/pdf', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Extraction failed');
+            }
+
+            return {
+                success: true,
+                content: result.content,
+                page: pageNumber
+            };
+
+        } catch (error) {
+            console.error('Extraction error:', error);
+            return {
+                success: false,
+                error: error.message
+            };
         }
     }
 } 

@@ -189,6 +189,21 @@
     // 텍스트가 추가되면 직접 입력 탭으로 전환
     activeTab = 'manual';
   }
+
+  function handleShowDetails(event) {
+    const embedding = event.detail;
+    showEmbeddingDetails(embedding);
+  }
+
+  function handleStartEditing(event) {
+    const embedding = event.detail;
+    startEditing(embedding);
+  }
+
+  function handleDelete(event) {
+    const { filename } = event.detail;
+    deleteEmbedding(filename, event);
+  }
 </script>
 
 <div class="container mx-auto px-4 py-8">

@@ -12,6 +12,8 @@ export class PDFViewerAPI {
         this.pageElements = [];
         this.renderTask = null;
         this.isRendering = false;
+        this.renderQueue = Promise.resolve();
+        this.currentViewport = null;
     }
 
     calculateScale(page) {
@@ -28,8 +30,7 @@ export class PDFViewerAPI {
         
         try {
             if (this.pdf) {
-                this.pdf.destroy();
-                this.pdf = null;
+                await this.cleanup();
             }
 
             const arrayBuffer = await file.arrayBuffer();
@@ -43,7 +44,6 @@ export class PDFViewerAPI {
             }
             
             console.log('PDF loaded:', this.totalPages, 'pages, scale:', this.scale);
-            await this.renderPage(this.currentPage);
             return true;
         } catch (error) {
             console.error('PDF loading error:', error);
@@ -53,100 +53,109 @@ export class PDFViewerAPI {
 
     async renderPage(pageNum, showOverlay = true, parsingMode = 'viewer') {
         if (!this.pdf || !this.canvas) {
-            console.log('PDF or canvas not ready');
+            console.log('[Debug] PDF or canvas not ready', { pdf: !!this.pdf, canvas: !!this.canvas });
             return;
         }
 
-        if (this.isRendering) {
-            console.log('Rendering in progress, waiting...');
-            return;
-        }
+        return new Promise((resolve, reject) => {
+            this.renderQueue = this.renderQueue.then(async () => {
+                if (this.isRendering) {
+                    console.log('[Debug] Rendering in progress, queued...');
+                    return;
+                }
 
-        try {
-            this.isRendering = true;
-            
-            if (this.renderTask) {
-                await this.renderTask.cancel();
-                this.renderTask = null;
-                const context = this.canvas.getContext('2d');
-                context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            }
+                let page = null;
+                
+                try {
+                    this.isRendering = true;
 
-            this.currentPage = pageNum;
-            const page = await this.pdf.getPage(pageNum);
-            
-            let effectiveScale;
-            if (this.scale === 'auto') {
-                effectiveScale = this.calculateScale(page);
-            } else {
-                effectiveScale = parseFloat(this.scale);
-            }
+                    if (this.renderTask) {
+                        await this.renderTask.cancel();
+                        this.renderTask = null;
+                    }
 
-            const viewport = page.getViewport({ 
-                scale: effectiveScale,
-                rotation: 0
+                    const context = this.canvas.getContext('2d');
+                    context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                    if (this.overlayDiv) {
+                        this.overlayDiv.innerHTML = '';
+                    }
+
+                    page = await this.pdf.getPage(pageNum);
+                    this.currentPage = pageNum;
+                    
+                    const effectiveScale = this.scale === 'auto' 
+                        ? this.calculateScale(page) 
+                        : parseFloat(this.scale);
+
+                    this.currentViewport = page.getViewport({ 
+                        scale: effectiveScale,
+                        rotation: 0
+                    });
+                    
+                    this.canvas.height = this.currentViewport.height;
+                    this.canvas.width = this.currentViewport.width;
+                    
+                    this.renderTask = page.render({
+                        canvasContext: context,
+                        viewport: this.currentViewport
+                    });
+                    
+                    await this.renderTask.promise;
+                    
+                    if (showOverlay) {
+                        if (parsingMode === 'viewer') {
+                            const textContent = await page.getTextContent();
+                            await this.renderOverlay(page, this.currentViewport, effectiveScale, textContent);
+                        } else if (parsingMode === 'pymupdf') {
+                            this.renderPyMuPDFElements(this.pageElements, this.currentViewport);
+                        }
+                    }
+
+                    resolve({ success: true, page: this.currentPage });
+                } catch (error) {
+                    console.error('[Debug] Page rendering error:', error);
+                    reject(error);
+                } finally {
+                    this.isRendering = false;
+                    this.renderTask = null;
+                    if (page) {
+                        page.cleanup();
+                    }
+                }
             });
-            
-            this.canvas.height = viewport.height;
-            this.canvas.width = viewport.width;
-            
-            const context = this.canvas.getContext('2d');
-            const renderContext = {
-                canvasContext: context,
-                viewport: viewport
-            };
-            
-            console.log('Starting render for page:', pageNum);
-            this.renderTask = page.render(renderContext);
-            
-            await this.renderTask.promise;
-            console.log('Render completed for page:', pageNum);
-            
-            if (showOverlay && parsingMode === 'viewer') {
-                await this.renderOverlay(page, viewport, effectiveScale);
-            } else if (this.overlayDiv) {
-                this.overlayDiv.innerHTML = '';
-            }
-
-            return this.pageElements;
-        } catch (error) {
-            if (error.name === 'RenderingCancelled') {
-                console.log('Previous rendering was cancelled');
-            } else {
-                console.error('Page rendering error:', error);
-                throw error;
-            }
-        } finally {
-            this.isRendering = false;
-            this.renderTask = null;
-        }
+        });
     }
 
-    async renderOverlay(page, viewport, effectiveScale) {
-        if (!this.overlayDiv) return;
+    async renderOverlay(page, viewport, effectiveScale, textContent) {
+        if (!this.overlayDiv) {
+            console.log('[Debug] No overlay div available');
+            return;
+        }
 
         try {
-            const textContent = await page.getTextContent();
-            
-            const debugCanvas = document.createElement('canvas');
-            debugCanvas.style.position = 'absolute';
-            debugCanvas.style.left = '0';
-            debugCanvas.style.top = '0';
-            debugCanvas.width = viewport.width;
-            debugCanvas.height = viewport.height;
-            debugCanvas.style.pointerEvents = 'none';
-            debugCanvas.style.zIndex = '3';
-            const debugCtx = debugCanvas.getContext('2d');
-            
+            console.log('[Debug] Starting overlay render', {
+                viewportDimensions: {
+                    width: viewport.width,
+                    height: viewport.height
+                }
+            });
+
             this.overlayDiv.innerHTML = '';
-            this.overlayDiv.style.position = 'absolute';
-            this.overlayDiv.style.left = '0';
-            this.overlayDiv.style.top = '0';
-            this.overlayDiv.style.width = `${viewport.width}px`;
-            this.overlayDiv.style.height = `${viewport.height}px`;
-            this.overlayDiv.style.display = 'block';
-            this.overlayDiv.style.pointerEvents = 'auto';
-            this.overlayDiv.appendChild(debugCanvas);
+            Object.assign(this.overlayDiv.style, {
+                position: 'absolute',
+                left: '0',
+                top: '0',
+                width: `${viewport.width}px`,
+                height: `${viewport.height}px`,
+                display: 'block',
+                pointerEvents: 'auto',
+                zIndex: '1',
+                visibility: 'visible',
+                opacity: '1'
+            });
+
+            console.log('[Debug] Processing text items:', textContent.items.length);
 
             textContent.items.forEach((item, index) => {
                 const transform = viewport.transform;
@@ -154,18 +163,7 @@ export class PDFViewerAPI {
                 
                 const itemHeight = item.height * effectiveScale;
                 const itemWidth = item.width * effectiveScale;
-                
                 const top = y - itemHeight;
-
-                debugCtx.strokeStyle = 'red';
-                debugCtx.lineWidth = 1;
-                debugCtx.strokeRect(x, top, itemWidth, itemHeight);
-                
-                debugCtx.strokeStyle = 'blue';
-                debugCtx.beginPath();
-                debugCtx.moveTo(x, y);
-                debugCtx.lineTo(x + itemWidth, y);
-                debugCtx.stroke();
 
                 const box = document.createElement('div');
                 box.className = 'bounding-box';
@@ -179,14 +177,6 @@ export class PDFViewerAPI {
                 box.style.cursor = 'pointer';
                 box.dataset.text = item.str;
                 box.dataset.index = index;
-
-                box.title = `
-                    Text: ${item.str}
-                    Original: (${item.transform[4]}, ${item.transform[5]})
-                    Transformed: (${x}, ${y})
-                    Top: ${top}
-                    Height: ${itemHeight}
-                `;
 
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
@@ -223,8 +213,10 @@ export class PDFViewerAPI {
                     }
                 });
             });
+
+            console.log('[Debug] Overlay render complete');
         } catch (error) {
-            console.error('Overlay rendering error:', error);
+            console.error('[Debug] Overlay rendering error:', error);
         }
     }
 
@@ -257,23 +249,28 @@ export class PDFViewerAPI {
         paragraph.height = maxY - paragraph.y;
     }
 
-    cleanup() {
-        if (this.renderTask) {
-            this.renderTask.cancel();
-            this.renderTask = null;
+    async cleanup() {
+        try {
+            if (this.renderTask) {
+                await this.renderTask.cancel();
+                this.renderTask = null;
+            }
+            if (this.pdf) {
+                await this.pdf.destroy();
+                this.pdf = null;
+            }
+            if (this.canvas) {
+                const ctx = this.canvas.getContext('2d');
+                ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+            if (this.overlayDiv) {
+                this.overlayDiv.innerHTML = '';
+            }
+            this.isRendering = false;
+            this.renderQueue = Promise.resolve();
+        } catch (error) {
+            console.error('Cleanup error:', error);
         }
-        if (this.pdf) {
-            this.pdf.destroy();
-            this.pdf = null;
-        }
-        if (this.canvas) {
-            const ctx = this.canvas.getContext('2d');
-            ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        }
-        if (this.overlayDiv) {
-            this.overlayDiv.innerHTML = '';
-        }
-        this.isRendering = false;
     }
 
     setScale(newScale) {
@@ -285,6 +282,12 @@ export class PDFViewerAPI {
         return this.currentPage;
     }
 
+    setCurrentPage(pageNum) {
+        if (pageNum >= 1 && pageNum <= this.totalPages) {
+            this.currentPage = pageNum;
+        }
+    }
+
     getTotalPages() {
         return this.totalPages;
     }
@@ -292,6 +295,44 @@ export class PDFViewerAPI {
     handleResize() {
         if (this.pdf && this.currentPage) {
             this.renderPage(this.currentPage);
+        }
+    }
+
+    renderPyMuPDFElements(elements, viewport) {
+        if (!this.overlayDiv || !elements || !viewport) return;
+        
+        this.overlayDiv.innerHTML = '';
+        
+        elements.forEach(element => {
+            const [x1, y1, x2, y2] = element.bbox;
+            
+            const rect = viewport.convertToViewportRectangle([x1, y1, x2, y2]);
+            
+            const div = document.createElement('div');
+            div.className = 'element-box';
+            div.style.position = 'absolute';
+            div.style.left = `${Math.min(rect[0], rect[2])}px`;
+            div.style.top = `${Math.min(rect[1], rect[3])}px`;
+            div.style.width = `${Math.abs(rect[2] - rect[0])}px`;
+            div.style.height = `${Math.abs(rect[3] - rect[1])}px`;
+            div.style.border = `2px solid ${element.type === 'text' ? '#4a90e2' : 
+                              element.type === 'table' ? '#45a049' : '#e2574a'}`;
+            div.style.backgroundColor = element.selected ? 'rgba(74, 144, 226, 0.1)' : 'transparent';
+            div.style.cursor = 'pointer';
+            
+            const badge = document.createElement('div');
+            badge.className = 'element-type-badge';
+            badge.textContent = element.type;
+            div.appendChild(badge);
+            
+            this.overlayDiv.appendChild(div);
+        });
+    }
+
+    setPageElements(elements) {
+        this.pageElements = elements;
+        if (this.currentViewport) {
+            this.renderPyMuPDFElements(elements, this.currentViewport);
         }
     }
 } 

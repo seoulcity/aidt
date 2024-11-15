@@ -4,7 +4,8 @@
   import { browser } from '$app/environment';
   import * as pdfjsLib from 'pdfjs-dist';
   import { PDFViewerAPI } from '$lib/api/pdfViewerAPI';
-  import { PDFExtractor } from '$lib/utils/PDFExtractor.js';
+  import { PDFService } from '$lib/services/pdfService';
+  import ExtractedContentList from './pdf-viewer/ExtractedContentList.svelte';
   
   const dispatch = createEventDispatcher();
   
@@ -17,7 +18,6 @@
   let scale = 'auto';
   let currentPage = 1;
   let totalPages = 0;
-  const pdfExtractor = new PDFExtractor();
   
   let isExtracting = false;
   let extractionProgress = '';
@@ -71,78 +71,22 @@
     };
   });
 
-  $: if (file && pdfViewer && browser) {
+  $: if (file && pdfViewer && browser && !pdfViewer.pdf) {
     (async () => {
         try {
-            await pdfViewer.loadPDF(file);
-            currentPage = pdfViewer.getCurrentPage();
-            totalPages = pdfViewer.getTotalPages();
+            isRendering = true;
+            const success = await pdfViewer.loadPDF(file);
+            if (success) {
+                currentPage = pdfViewer.getCurrentPage();
+                totalPages = pdfViewer.getTotalPages();
+                await pdfViewer.renderPage(currentPage, parsingMode === 'viewer', parsingMode);
+            }
         } catch (error) {
             console.error('PDF loading error:', error);
+        } finally {
+            isRendering = false;
         }
     })();
-  }
-
-  // 헬퍼 함수들 추가
-  function createNewParagraph() {
-    return {
-      type: 'paragraph',
-      content: [],
-      x: Infinity,
-      y: Infinity,
-      width: 0,
-      height: 0,
-      selected: false
-    };
-  }
-
-  function finalizeParagraph(paragraph) {
-    if (paragraph.content.length === 0) return;
-    
-    // 문단의 너비와 높이 계산
-    const maxX = Math.max(...paragraph.content.map(c => c.x + c.width));
-    const maxY = Math.max(...paragraph.content.map(c => c.y + c.height));
-    
-    paragraph.width = maxX - paragraph.x;
-    paragraph.height = maxY - paragraph.y;
-  }
-
-  async function extractContent() {
-    if (!file) return;
-    
-    try {
-        isExtracting = true;
-        extractionProgress = `${currentPage}페이지 ${extractionType === 'text' ? '텍스트' : 
-                           extractionType === 'tables' ? '표' : '이미지'} 추출 중...`;
-      
-        const result = await pdfExtractor.extractPDF(file, extractionType, currentPage);
-      
-        if (result.success) {
-            extractionProgress = `${result.page}페이지 추출 완료!`;
-            
-            // 추출된 내용을 바로 목록에 추가
-            extractedContents = [...extractedContents, {
-                text: result.content,
-                page: currentPage,
-                type: extractionType,
-                timestamp: new Date().toISOString()
-            }];
-
-            // 3초 후 진행 메시지 제거
-            setTimeout(() => {
-                extractionProgress = '';
-            }, 3000);
-        }
-    } catch (error) {
-        console.error('Content extraction failed:', error);
-        extractionProgress = '추출 실패: ' + (error.message || '알 수 없는 오류');
-        
-        setTimeout(() => {
-            extractionProgress = '';
-        }, 3000);
-    } finally {
-        isExtracting = false;
-    }
   }
 
   function confirmExtraction() {
@@ -161,45 +105,31 @@
     extractedContents = extractedContents.filter((_, i) => i !== index);
   }
 
-  function saveAllContents() {
-    const combinedText = extractedContents
-      .map(content => content.text)
-      .join('\n\n');
-    
-    dispatch('addToEmbedding', { text: combinedText });
-    extractedContents = [];
-  }
   
-  async function handleParsingModeChange() {
-    if (!pdfViewer) return;
-
-    try {
-        if (parsingMode === 'viewer') {
-            await pdfViewer.renderPage(currentPage, true, 'viewer');
-        } else {
-            await pdfViewer.renderPage(currentPage, false, 'pymupdf');
-        }
-    } catch (error) {
-        console.error('Parsing mode change error:', error);
-    }
-  }
-  
-  // parsingMode 변경 감시
   $: if (parsingMode && pdfViewer) {
-    handleParsingModeChange();
+    (async () => {
+        try {
+            isRendering = true;
+            await pdfViewer.renderPage(currentPage, parsingMode === 'viewer', parsingMode);
+            if (parsingMode === 'pymupdf') {
+                try {
+                    await loadPageElements();
+                } catch (error) {
+                    console.warn('Failed to load page elements on mode change:', error);
+                    pageElements = [];
+                }
+            }
+        } catch (error) {
+            console.error('Parsing mode change error:', error);
+        } finally {
+            isRendering = false;
+        }
+    })();
   }
 
   // scale 변경될 때 PDFViewerAPI에 반영
   $: if (pdfViewer && scale) {
     pdfViewer.setScale(scale);
-  }
-
-  // 페이지 렌더링 함수
-  async function renderPage(pageNum) {
-    if (!pdfViewer) return;
-    await pdfViewer.renderPage(pageNum);
-    currentPage = pdfViewer.getCurrentPage();
-    totalPages = pdfViewer.getTotalPages();
   }
 
   // PDF 정리를 위한 cleanup 함수
@@ -262,85 +192,147 @@
 
   // 페이지 이동 시에도 현재 파싱 모드 유지
   async function changePage(newPage) {
-    if (pdfViewer && newPage >= 1 && newPage <= totalPages && !isRendering) {
-        try {
-            isRendering = true; // 렌더링 시작
-            currentPage = newPage;
-            await pdfViewer.renderPage(currentPage, parsingMode === 'viewer', parsingMode);
-        } catch (error) {
-            console.error('Page change error:', error);
-        } finally {
-            isRendering = false; // 렌더링 완료
+    if (!pdfViewer || newPage < 1 || newPage > totalPages || isRendering) {
+        return;
+    }
+
+    try {
+        isRendering = true;
+        
+        // overlayDiv 초기화
+        if (overlayDiv) {
+            overlayDiv.innerHTML = '';
         }
+        
+        // 페이지 렌더링
+        await pdfViewer.renderPage(newPage, parsingMode === 'viewer', parsingMode);
+        currentPage = newPage;
+        
+        // PyMuPDF 모드일 경우 페이지 요소 로드 시도
+        if (parsingMode === 'pymupdf') {
+            try {
+                await loadPageElements();
+            } catch (error) {
+                console.warn('Failed to load page elements:', error);
+                pageElements = [];
+            }
+        }
+    } catch (error) {
+        console.error('Page change error:', error);
+    } finally {
+        isRendering = false;
     }
   }
 
-  // pageElements 로드 함수 추가
+  // loadPageElements 함수 수정
   async function loadPageElements() {
     if (!file || !pdfViewer) return;
     
     try {
-        const result = await pdfExtractor.analyzePage(file, currentPage);
-        if (result.success) {
-            pageElements = result.elements;
-        }
+        pageElements = await PDFService.analyzePageElements(file, currentPage);
+        selectedElements = []; // 페이지 변경 시 선택된 요소 초기화
+        
+        // PDFViewerAPI에 요소 정보 전달
+        pdfViewer.setPageElements(pageElements);
     } catch (error) {
         console.error('Failed to load page elements:', error);
+        pageElements = [];
     }
   }
 
-  // 요소 선택/해제 토글 함수
-  function toggleElementSelection(element) {
-    if (element.type !== extractionType) return;
+  // toggleElementSelection 함수 수정
+  function toggleElementSelection(element, index) {
+    console.log('Toggle element:', element, 'type:', extractionType); // 디버깅용
     
-    element.selected = !element.selected;
-    if (element.selected) {
-        selectedElements = [...selectedElements, element];
-    } else {
-        selectedElements = selectedElements.filter(e => e !== element);
+    // 타입 체크 로직 수정
+    if (element.type !== extractionType) {
+        console.log('Type mismatch:', element.type, '!=', extractionType);
+        return;
+    }
+    
+    // pageElements 업데이트
+    pageElements = pageElements.map((el, i) => {
+        if (i === index) {
+            const newSelected = !el.selected;
+            console.log('Toggling element at index:', index, 'current selected:', newSelected);
+            return { ...el, selected: newSelected };
+        }
+        return el;
+    });
+    
+    // selectedElements 업데이트
+    selectedElements = pageElements.filter(el => el.selected);
+    console.log('Selected elements:', selectedElements.length); // 디버깅용
+    
+    // PDFViewerAPI에 업데이트된 요소 정보 전달
+    if (pdfViewer) {
+        pdfViewer.setPageElements(pageElements);
     }
   }
 
-  // 선택된 요소들 추출 함수
+  // parsingMode 변경 감시 수정
+  $: if (parsingMode === 'pymupdf' && file && pdfViewer) {
+    loadPageElements().catch(error => {
+        console.error('Failed to load page elements on mode change:', error);
+    });
+  }
+
+  // 페이지가 변경될 때도 요소 다시 로드
+  $: if (currentPage && parsingMode === 'pymupdf') {
+    loadPageElements();
+  }
+
+  // 선택된 요소들 추출 함수 수정
   async function extractSelectedElements() {
     if (!selectedElements.length) return;
     
     try {
         isExtracting = true;
         
-        // 선택된 요소들을 PyMuPDF4LLM에 전달하기 위한 형식으로 변환
-        const result = await pdfExtractor.extractPDF(
+        const content = await PDFService.extractSelectedElements(
             file,
             extractionType,
             currentPage,
-            selectedElements.map(e => e.bbox)
+            selectedElements
         );
         
-        if (result.success) {
-            extractedContents = [...extractedContents, {
-                text: result.content,
-                page: currentPage,
-                type: extractionType,
-                timestamp: new Date().toISOString()
-            }];
-        }
+        extractedContents = [...extractedContents, {
+            text: content,
+            page: currentPage,
+            type: extractionType,
+            timestamp: new Date().toISOString()
+        }];
     } catch (error) {
         console.error('Extraction failed:', error);
     } finally {
         isExtracting = false;
         selectedElements = [];
         pageElements = pageElements.map(e => ({ ...e, selected: false }));
+        pdfViewer.setPageElements(pageElements);
     }
   }
 
-  // parsingMode가 변경될 때 페이지 요소 로드
-  $: if (parsingMode === 'pymupdf' && file && pdfViewer) {
-    loadPageElements();
+  function handleRemoveContent(event) {
+    const { index } = event.detail;
+    extractedContents = extractedContents.filter((_, i) => i !== index);
   }
 
-  // 페이지가 변경될 때도 요소 다시 로드
-  $: if (currentPage && parsingMode === 'pymupdf') {
-    loadPageElements();
+  async function handleVectorize() {
+    if (extractedContents.length === 0) return;
+    
+    try {
+      isVectorizing = true;
+      const combinedText = extractedContents
+        .map(content => content.text)
+        .join('\n\n');
+      
+      dispatch('addToEmbedding', { text: combinedText });
+      extractedContents = []; // 벡터화 후 초기화
+    } catch (error) {
+      console.error('Vectorization failed:', error);
+    } finally {
+      isVectorizing = false;
+    }
   }
 </script>
 
@@ -425,19 +417,19 @@
     </div>
 
     <!-- PDF 캔버스 -->
-    <div class="canvas-container border rounded p-4 bg-gray-100 overflow-auto relative">
+    <div class="canvas-container relative w-full max-h-[800px] border rounded p-4 bg-gray-100 overflow-auto">
       <canvas bind:this={canvas}></canvas>
-      {#if parsingMode === 'viewer'}
-        <div
-          bind:this={overlayDiv}
-          class="absolute inset-0 pointer-events-auto"
-          style="z-index: 1;"
-        ></div>
-      {:else if parsingMode === 'pymupdf' && pageElements}
-        <div class="absolute inset-0 pointer-events-auto" style="z-index: 1;">
-          {#each pageElements as element}
+      <div
+        bind:this={overlayDiv}
+        class="absolute inset-0 pointer-events-auto z-[1]"
+        class:hidden={parsingMode !== 'viewer'}
+      ></div>
+      {#if parsingMode === 'pymupdf' && pageElements}
+        <div class="absolute inset-0 pointer-events-auto z-[1]">
+          {#each pageElements as element, index}
+            <!-- svelte-ignore a11y-click-events-have-key-events -->
             <div
-              class="element-box absolute"
+              class="absolute transition-all duration-200 ease-in-out z-[2] hover:border-[3px] hover:bg-blue-50/5"
               style="
                 left: {element.bbox[0]}px;
                 top: {element.bbox[1]}px;
@@ -445,11 +437,16 @@
                 height: {element.bbox[3] - element.bbox[1]}px;
                 border: 2px solid {element.type === extractionType ? '#4a90e2' : '#ddd'};
                 background-color: {element.selected ? 'rgba(74, 144, 226, 0.1)' : 'transparent'};
-                cursor: pointer;
+                cursor: {element.type === extractionType ? 'pointer' : 'not-allowed'};
               "
-              on:click={() => toggleElementSelection(element)}
+              on:click={() => toggleElementSelection(element, index)}
+              role="button"
+              tabindex="0"
             >
-              <div class="element-type-badge">
+              <div 
+                class="absolute -top-5 -left-0.5 text-white text-xs px-1.5 py-0.5 rounded whitespace-nowrap"
+                style="background-color: {element.type === extractionType ? '#4a90e2' : '#999'};"
+              >
                 {element.type}
               </div>
             </div>
@@ -458,7 +455,7 @@
       {/if}
     </div>
 
-    <!-- 수동 선택 모드일 때의 컨트롤 수정 -->
+    <!-- 수동 선택 모드일 때의 컨트롤 -->
     {#if parsingMode === 'viewer'}
       <div class="mt-4 bg-white p-4 rounded-lg shadow">
         <div class="flex justify-between items-center">
@@ -474,54 +471,54 @@
       </div>
     {/if}
 
-    <!-- PyMuPDF 모드 컨트롤 -->
+    <!-- PyMuPDF 모드 컨트롤 추가 -->
     {#if parsingMode === 'pymupdf'}
       <div class="mt-4 bg-white p-4 rounded-lg shadow">
         <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center space-x-4">
-                <label class="inline-flex items-center">
-                    <input
-                        type="radio"
-                        bind:group={extractionType}
-                        value="text"
-                        class="form-radio"
-                    />
-                    <span class="ml-2">텍스트</span>
-                </label>
-                
-                <label class="inline-flex items-center">
-                    <input
-                        type="radio"
-                        bind:group={extractionType}
-                        value="tables"
-                        class="form-radio"
-                    />
-                    <span class="ml-2">표</span>
-                </label>
-                
-                <label class="inline-flex items-center">
-                    <input
-                        type="radio"
-                        bind:group={extractionType}
-                        value="images"
-                        class="form-radio"
-                    />
-                    <span class="ml-2">이미지</span>
-                </label>
-            </div>
+          <div class="flex items-center space-x-4">
+            <label class="inline-flex items-center">
+              <input
+                type="radio"
+                bind:group={extractionType}
+                value="text"
+                class="form-radio"
+              />
+              <span class="ml-2">텍스</span>
+            </label>
             
-            <button
-              type="button"
-              on:click={extractSelectedElements}
-              class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-              disabled={selectedElements.length === 0}
-            >
-              {#if selectedElements.length > 0}
-                선택된 {selectedElements.length}개 항목 추출
-              {:else}
-                추출할 항목 선택
-              {/if}
-            </button>
+            <label class="inline-flex items-center">
+              <input
+                type="radio"
+                bind:group={extractionType}
+                value="tables"
+                class="form-radio"
+              />
+              <span class="ml-2">표</span>
+            </label>
+            
+            <label class="inline-flex items-center">
+              <input
+                type="radio"
+                bind:group={extractionType}
+                value="images"
+                class="form-radio"
+              />
+              <span class="ml-2">이미지</span>
+            </label>
+          </div>
+          
+          <button
+            type="button"
+            on:click={extractSelectedElements}
+            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+            disabled={selectedElements.length === 0}
+          >
+            {#if selectedElements.length > 0}
+              선택된 {selectedElements.length}개 항목 추출
+            {:else}
+              추출할 항목 선택
+            {/if}
+          </button>
         </div>
       </div>
     {/if}
@@ -562,118 +559,12 @@
       </div>
     {/if}
 
-    <!-- 추출된 내용 목록 (공통) -->
-    {#if extractedContents.length > 0}
-      <div class="mt-4 bg-white p-4 rounded-lg shadow">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-semibold">추출된 내용 목록</h3>
-          <button
-            type="button"
-            on:click={vectorizeContents}
-            class="px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50"
-            disabled={isVectorizing}
-          >
-            {#if isVectorizing}
-              <span>벡터화 중...</span>
-            {:else}
-              <span>벡터화하기</span>
-            {/if}
-          </button>
-        </div>
-        
-        <div class="space-y-4">
-          {#each extractedContents as content, i}
-            <div class="p-3 bg-gray-50 rounded-md">
-              <div class="flex justify-between items-start mb-2">
-                <div class="text-sm text-gray-600">
-                  페이지 {content.page} - {content.type === 'text' ? '텍스트' : 
-                                         content.type === 'tables' ? '표' : '이미지'}
-                </div>
-                <button
-                  type="button"
-                  on:click={() => removeExtractedContent(i)}
-                  class="text-red-600 hover:text-red-800"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <pre class="whitespace-pre-wrap text-sm">{content.text}</pre>
-            </div>
-          {/each}
-        </div>
-      </div>
-    {/if}
+    <!-- 추출된 내용 목록 컴포넌트로 교체 -->
+    <ExtractedContentList
+      {extractedContents}
+      {isVectorizing}
+      on:removeContent={handleRemoveContent}
+      on:vectorize={handleVectorize}
+    />
   </div>
 </div>
-
-<style>
-  .canvas-container {
-    max-height: 800px;
-    position: relative;
-    width: 100%;
-  }
-  
-  /* 오버레이 관련 스타일 추가 */
-  :global(.bounding-box) {
-    transition: all 0.2s ease-in-out;
-    z-index: 2;
-  }
-  
-  :global(.element-checkbox) {
-    transform: scale(1.2);
-    cursor: pointer;
-    z-index: 3;
-  }
-  
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  
-  .animate-spin {
-    animation: spin 1s linear infinite;
-  }
-  
-  pre {
-    font-family: inherit;
-  }
-
-  .element-type-badge {
-    position: absolute;
-    top: -18px;
-    left: 0;
-    background-color: #4a90e2;
-    color: white;
-    padding: 2px 4px;
-    font-size: 10px;
-    border-radius: 2px;
-  }
-
-  .element-box {
-    transition: all 0.2s ease-in-out;
-    z-index: 2;
-  }
-  
-  .element-box:hover {
-    border-width: 3px !important;
-    background-color: rgba(74, 144, 226, 0.05) !important;
-  }
-  
-  .element-type-badge {
-    position: absolute;
-    top: -20px;
-    left: -2px;
-    background-color: #4a90e2;
-    color: white;
-    padding: 2px 6px;
-    font-size: 10px;
-    border-radius: 3px;
-    white-space: nowrap;
-  }
-</style> 
