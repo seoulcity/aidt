@@ -6,7 +6,6 @@
   import ErrorMessage from '$lib/components/common/ErrorMessage.svelte';
   import TabNavigation from '$lib/components/grammar-search/TabNavigation.svelte';
   import ManualInputTab from '$lib/components/grammar-search/ManualInputTab.svelte';
-  import FileUploadTab from '$lib/components/grammar-search/FileUploadTab.svelte';
   import EmbeddingListTab from '$lib/components/grammar-search/EmbeddingListTab.svelte';
   import EmbeddingModal from '$lib/components/grammar-search/EmbeddingModal.svelte';
   import EditModal from '$lib/components/grammar-search/EditModal.svelte';
@@ -37,6 +36,7 @@
   let selectedFile = null;
   let showPDFViewer = false;
   let activeTab = 'manual'; // 'manual' 또는 'file'
+  let isVectorizing = false; // 벡터화 중인지 여부
 
   async function loadEmbeddings() {
     try {
@@ -216,6 +216,31 @@
     const { filename } = event.detail;
     deleteEmbedding(filename, event);
   }
+
+  function handleVectorizingError(error) {
+    isVectorizing = false;
+    status = '';
+    error = error.detail.error;
+  }
+
+  async function handleEmbeddingCreated() {
+    try {
+      await loadEmbeddings();
+      status = '임베딩 생성 완료!';
+      // 데이터 목록 탭으로 이동
+      activeTab = 'list';
+      // 파일 선택 초기화
+      selectedFile = null;
+      showPDFViewer = false;
+      const fileInput = document.querySelector('input[type="file"]');
+      if (fileInput) fileInput.value = '';
+    } catch (err) {
+      error = '임베딩 목록을 새로고침하는데 실패했습니다.';
+    } finally {
+      isVectorizing = false;
+      setTimeout(() => { status = ''; }, 3000);
+    }
+  }
 </script>
 
 <div class="container mx-auto px-4 py-8">
@@ -278,7 +303,15 @@
                     {#if showPDFViewer}
                         <PDFViewer
                             file={selectedFile}
+                            {formData}
                             on:addToEmbedding={handleAddToEmbedding}
+                            on:vectorizingStart={() => {
+                                isVectorizing = true;
+                                status = '임베딩 생성 중...';
+                                error = null;
+                            }}
+                            on:vectorizingError={handleVectorizingError}
+                            on:embeddingCreated={handleEmbeddingCreated}
                         />
                     {/if}
                 </div>

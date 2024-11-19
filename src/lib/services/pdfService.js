@@ -91,4 +91,32 @@ export class PDFService {
             throw error;
         }
     }
+
+    /**
+     * 특정 영역의 표를 추출
+     */
+    static async extractTable(file, pageNumber, bbox) {
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('page_number', pageNumber);
+            formData.append('bbox', JSON.stringify(bbox));
+            
+            const response = await fetch('/api/pdf/extract-table', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Table extraction failed');
+            }
+            
+            return result.content;
+        } catch (error) {
+            console.error('Table extraction failed:', error);
+            throw error;
+        }
+    }
 } 

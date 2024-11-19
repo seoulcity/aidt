@@ -222,6 +222,18 @@
     selectedElements = event.detail.selectedElements;
     pageElements = event.detail.pageElements;
   }
+
+  function handleClearSelections() {
+    console.log('PDFViewer: Handling clearSelections');
+    selectedElements = [];
+    pageElements = pageElements.map(e => ({ ...e, selected: false }));
+    if (pdfViewer) {
+      console.log('PDFViewer: Updating pdfViewer elements');
+      pdfViewer.setPageElements(pageElements);
+    }
+  }
+
+  export let formData; // formData prop 추가
 </script>
 
 <div class="flex gap-4">
@@ -231,20 +243,33 @@
       {parsingMode}
       {extractionType}
       {selectedElements}
+      {pageElements}
       {file}
       {currentPage}
       {pdfViewer}
       on:parsingModeChange={(event) => parsingMode = event.detail.mode}
       on:extractionTypeChange={(event) => extractionType = event.detail.type}
+      on:clearSelections={handleClearSelections}
       on:extractingStart={() => isExtracting = true}
       on:extractingComplete={(event) => {
+        console.log('Extracted Content:', {
+          raw: event.detail.content,
+          text: event.detail.content.text,
+          type: event.detail.content.type,
+          page: event.detail.content.page,
+          selectedElements
+        });
+        
         extractedContents = [...extractedContents, event.detail.content];
         isExtracting = false;
         selectedElements = [];
         pageElements = pageElements.map(e => ({ ...e, selected: false }));
         pdfViewer.setPageElements(pageElements);
       }}
-      on:extractingError={() => isExtracting = false}
+      on:extractingError={(event) => {
+        console.error('Extraction Error:', event.detail.error);
+        isExtracting = false;
+      }}
     />
 
     <PDFPageControls
@@ -265,6 +290,7 @@
       {extractionType}
       {pdfViewer}
       on:selectionChange={handleSelectionChange}
+      on:clearSelections={handleClearSelections}
     />
 
     {#if parsingMode === 'viewer'}
@@ -288,12 +314,13 @@
     <ExtractedContentList
       {extractedContents}
       {isVectorizing}
+      {formData}
       on:removeContent={(event) => extractedContents = extractedContents.filter((_, i) => i !== event.detail.index)}
       on:vectorizingStart={() => isVectorizing = true}
-      on:vectorize={(event) => {
-        dispatch('addToEmbedding', { text: event.detail.text });
-        extractedContents = [];
+      on:vectorizingComplete={() => {
         isVectorizing = false;
+        extractedContents = [];
+        dispatch('embeddingCreated');
       }}
       on:vectorizingError={() => isVectorizing = false}
     />

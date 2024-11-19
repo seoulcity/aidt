@@ -1,3 +1,4 @@
+<!-- src/lib/components/pdf-viewer/PDFCanvas.svelte -->
 <script>
   export let canvas;
   export let overlayDiv;
@@ -12,6 +13,11 @@
 
   function handleSelectionChange(event) {
     dispatch('selectionChange', event.detail);
+  }
+
+  function handleClearSelections() {
+    console.log('PDFCanvas: Forwarding clearSelections event');
+    dispatch('clearSelections');
   }
 </script>
 
@@ -28,6 +34,7 @@
       {extractionType}
       {pdfViewer}
       on:selectionChange={handleSelectionChange}
+      on:clearSelections={handleClearSelections}
     />
   {/if}
 </div> 

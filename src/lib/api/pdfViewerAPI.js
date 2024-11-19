@@ -301,6 +301,7 @@ export class PDFViewerAPI {
     renderPyMuPDFElements(elements, viewport) {
         if (!this.overlayDiv || !elements || !viewport) return;
         
+        console.log('PDFViewerAPI: Rendering PyMuPDF elements');
         this.overlayDiv.innerHTML = '';
         
         elements.forEach(element => {
@@ -330,8 +331,10 @@ export class PDFViewerAPI {
     }
 
     setPageElements(elements) {
+        console.log('PDFViewerAPI: Setting page elements');
         this.pageElements = elements;
         if (this.currentViewport) {
+            console.log('PDFViewerAPI: Rendering updated elements');
             this.renderPyMuPDFElements(elements, this.currentViewport);
         }
     }

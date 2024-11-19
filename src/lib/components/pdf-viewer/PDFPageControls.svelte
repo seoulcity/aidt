@@ -40,7 +40,17 @@
         이전
       {/if}
     </button>
-    <span>페이지 {currentPage} / {totalPages}</span>
+    <span>
+      <input
+        type="number"
+        min="1"
+        max={totalPages}
+        bind:value={currentPage}
+        on:change={() => changePage(currentPage)}
+        class="border rounded px-2 py-1 w-16 inline"
+      />
+      / {totalPages}
+    </span>
     <button
       type="button"
       on:click={() => changePage(currentPage + 1)}
