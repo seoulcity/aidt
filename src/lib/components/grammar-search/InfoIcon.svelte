@@ -1,12 +1,18 @@
 <!-- src/lib/components/grammar-search/InfoIcon.svelte -->
 <script>
+  import { createEventDispatcher } from 'svelte';
+  const dispatch = createEventDispatcher();
+
   export let contexts;
-  export let onShowInfo;
+
+  function handleClick() {
+    dispatch('showInfo', { contexts });
+  }
 </script>
 
 <button
   class="flex-shrink-0 ml-3 mt-1 text-gray-400 hover:text-gray-600 transition-colors"
-  on:click={() => onShowInfo(contexts)}
+  on:click={handleClick}
   title="참고 자료 보기"
 >
   <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

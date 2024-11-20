@@ -10,7 +10,6 @@
   export let chatContainer;
   export let isLoading = false;
   export let autoScroll = true;
-  export let onShowContextInfo;
   
   // messages가 변경될 때마다 스크롤 처리
   $: if (messages && messages.length > 0 && autoScroll) {
@@ -26,6 +25,10 @@
       index,
       text
     });
+  }
+
+  function handleShowInfo(event) {
+    dispatch('showInfo', event.detail);
   }
 </script>
 
@@ -81,7 +84,7 @@
           {#if message.role === 'assistant' && message.contexts?.length > 0}
             <InfoIcon 
               contexts={message.contexts}
-              {onShowContextInfo}
+              on:showInfo={handleShowInfo}
             />
           {/if}
         </div>

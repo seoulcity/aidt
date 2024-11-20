@@ -62,12 +62,23 @@
     autoScroll = true;
 
     try {
-        let contexts = useContextSearch ? await searchRelatedContexts(messageText) : [];
+        const searchResult = useContextSearch ? await searchRelatedContexts(messageText) : { results: [], noRelevantResults: false };
+        const { results: contexts, noRelevantResults } = searchResult;
         relatedContexts = contexts;
+
+        if (useContextSearch && noRelevantResults) {
+            messages = [...messages, {
+                role: 'assistant',
+                content: '교과서 내에서 질의와 관련된 내용을 찾지 못했습니다. 교과서 내의 내용으로 다시 질문해보세요.',
+                timestamp: new Date(),
+                isError: true
+            }];
+            return;
+        }
 
         let systemPrompt = "당신은 영어 문법을 설명하는 선생님입니다. ";
         if (useContextSearch && contexts.length > 0) {
-            systemPrompt += "다음 참고 자료를 바탕으로 답변해주세요:\n\n";
+            systemPrompt += "다음 참고 자료의 범위 내에서만 답변해주세요:\n\n";
             contexts.forEach((ctx, i) => {
                 systemPrompt += `참고자료 ${i + 1} (${ctx.textbook} ${ctx.unit}):\n${ctx.context}\n\n`;
             });
@@ -112,9 +123,9 @@
     bind:chatContainer
     {isLoading}
     {autoScroll}
-    onShowContextInfo={handleShowContextInfo}
     on:scroll={handleScroll}
     on:messageComplete={handleMessageComplete}
+    on:showInfo={handleShowContextInfo}
   />
 
   <ChatInput 
@@ -126,6 +137,5 @@
     contexts={selectedContexts}
     bind:showModal={showContextModal}
     on:close={handleContextModalClose}
-    on:showInfo={handleShowContextInfo}
   />
 </div> 

@@ -21,13 +21,26 @@ export async function searchRelatedContexts(query) {
 
         logSearchResults(data);
         
-        return data.results || [];
+        if (data.results && data.results.length === 0) {
+            return {
+                results: [],
+                noRelevantResults: true
+            };
+        }
+        
+        return {
+            results: data.results || [],
+            noRelevantResults: false
+        };
     } catch (error) {
         console.error('임베딩 검색 오류:', {
             message: error.message,
             error: error
         });
-        return [];
+        return {
+            results: [],
+            noRelevantResults: false
+        };
     }
 }
 
@@ -62,6 +75,4 @@ function logSearchResults(data) {
             }))
         );
     }
-    
-    // ... 나머지 로깅 함수들
 } 
