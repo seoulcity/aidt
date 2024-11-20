@@ -1,3 +1,4 @@
+<!-- src/lib/components/grammar-search/ChatMessages.svelte -->
 <script>
   import { createEventDispatcher } from 'svelte';
   import InfoIcon from './InfoIcon.svelte';
