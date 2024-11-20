@@ -78,7 +78,7 @@
 
         let systemPrompt = "당신은 영어 문법을 설명하는 선생님입니다. ";
         if (useContextSearch && contexts.length > 0) {
-            systemPrompt += "다음 참고 자료의 범위 내에서만 답변해주세요:\n\n";
+            systemPrompt += "답변윤리를 준수하면서 다음 참고 자료의 범위 내에서만 답변해주세요:\n\n";
             contexts.forEach((ctx, i) => {
                 systemPrompt += `참고자료 ${i + 1} (${ctx.textbook} ${ctx.unit}):\n${ctx.context}\n\n`;
             });
