@@ -21,11 +21,13 @@
 			<h2 class="text-xl font-bold mb-2">초등 영어 쓰기 활동 평가</h2>
 			<p class="text-sm text-green-100">초등 영어 쓰기 활동을 평가해보세요</p>
 		</a>
-		<!-- "/miraen/grammar-search" -->
-		<div class="bg-gray-400 cursor-not-allowed text-white rounded-lg p-6 text-center transition-colors duration-200 shadow-md">
-			<h2 class="text-xl font-bold mb-2">영문법 검색형 서비스 (준비중)</h2>
+		<a
+			href="/miraen/grammar-search"
+			class="bg-purple-500 hover:bg-purple-600 text-white rounded-lg p-6 text-center transition-colors duration-200 shadow-md"
+		>
+			<h2 class="text-xl font-bold mb-2">영문법 검색형 서비스</h2>
 			<p class="text-sm text-gray-300">영문법을 쉽게 검색해보세요</p>
-		</div>
+		</a>
 	</div>
 
 	<footer class="text-center mt-auto">
