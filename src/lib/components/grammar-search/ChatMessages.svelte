@@ -1,30 +1,36 @@
 <script>
+  import { createEventDispatcher } from 'svelte';
   import InfoIcon from './InfoIcon.svelte';
   import StreamingText from './StreamingText.svelte';
+  
+  const dispatch = createEventDispatcher();
   
   export let messages = [];
   export let chatContainer;
   export let isLoading = false;
-  export let streamingMessage = '';
   export let autoScroll = true;
   export let onShowContextInfo;
   
-  function handleStreamComplete(text) {
-    messages = messages.map((msg, idx) => {
-      if (idx === messages.length - 1) {
-        return {
-          ...msg,
-          content: text,
-          isStreaming: false
-        };
+  // messages가 변경될 때마다 스크롤 처리
+  $: if (messages && messages.length > 0 && autoScroll) {
+    setTimeout(() => {
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
       }
-      return msg;
+    }, 0);
+  }
+
+  function handleStreamComplete(text, index) {
+    dispatch('messageComplete', {
+      index,
+      text
     });
   }
 </script>
 
 <div 
   bind:this={chatContainer}
+  on:scroll
   class="h-[600px] overflow-y-auto p-4 space-y-4
          [scrollbar-width:thin] [scrollbar-color:rgba(156,163,175,0.5)_transparent]
          [&::-webkit-scrollbar]:w-[6px]
@@ -45,7 +51,7 @@
     </div>
   {/if}
   
-  {#each messages as message}
+  {#each messages as message, i}
     <div class="flex {message.role === 'user' ? 'justify-end' : 'justify-start'}">
       <div class="relative max-w-[80%] rounded-lg p-3 {
         message.role === 'user' 
@@ -61,7 +67,7 @@
                 text={message.content}
                 {autoScroll}
                 {chatContainer}
-                onComplete={handleStreamComplete}
+                onComplete={(text) => handleStreamComplete(text, i)}
               />
             {:else}
               <p class="whitespace-pre-wrap">{message.content}</p>
@@ -74,7 +80,7 @@
           {#if message.role === 'assistant' && message.contexts?.length > 0}
             <InfoIcon 
               contexts={message.contexts}
-              onShowInfo={onShowContextInfo}
+              {onShowContextInfo}
             />
           {/if}
         </div>

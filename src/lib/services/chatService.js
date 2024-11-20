@@ -1,3 +1,4 @@
+// src/lib/services/chatService.js
 export async function searchRelatedContexts(query) {
     try {
         console.log('\n=== 임베딩 검색 시작 ===');

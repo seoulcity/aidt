@@ -15,15 +15,27 @@
   let useContextSearch = true;
   let autoScroll = true;
 
-  function handleScroll() {
+  function handleScroll(event) {
     if (!chatContainer) return;
     
-    const { scrollTop, scrollHeight, clientHeight } = chatContainer;
+    const { scrollTop, scrollHeight, clientHeight } = event.target;
     const isAtBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 10;
     
-    if (!isAtBottom) {
-      autoScroll = false;
-    }
+    autoScroll = isAtBottom;
+  }
+
+  function handleMessageComplete(event) {
+    const { index, text } = event.detail;
+    messages = messages.map((msg, i) => {
+      if (i === index) {
+        return {
+          ...msg,
+          content: text,
+          isStreaming: false
+        };
+      }
+      return msg;
+    });
   }
 
   function handleContextModalClose() {
@@ -55,7 +67,7 @@
 
         let systemPrompt = "당신은 영어 문법을 설명하는 선생님입니다. ";
         if (useContextSearch && contexts.length > 0) {
-            systemPrompt += "다음 참고 자료 범위 내에서만 답변해주세요:\n\n";
+            systemPrompt += "다음 참고 자료를 바탕으로 답변해주세요:\n\n";
             contexts.forEach((ctx, i) => {
                 systemPrompt += `참고자료 ${i + 1} (${ctx.textbook} ${ctx.unit}):\n${ctx.context}\n\n`;
             });
@@ -102,6 +114,7 @@
     {autoScroll}
     onShowContextInfo={handleShowContextInfo}
     on:scroll={handleScroll}
+    on:messageComplete={handleMessageComplete}
   />
 
   <ChatInput 
