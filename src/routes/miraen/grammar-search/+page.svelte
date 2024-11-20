@@ -10,6 +10,7 @@
   import EmbeddingModal from '$lib/components/grammar-search/EmbeddingModal.svelte';
   import EditModal from '$lib/components/grammar-search/EditModal.svelte';
   import PDFViewer from '$lib/components/PDFViewer.svelte';
+  import ChatTab from '$lib/components/grammar-search/ChatTab.svelte';
 
   let formData = {
     id: '',
@@ -263,7 +264,9 @@
                 <TabNavigation {activeTab} onTabChange={handleTabChange} />
             </div>
 
-            {#if activeTab === 'manual'}
+            {#if activeTab === 'chat'}
+                <ChatTab />
+            {:else if activeTab === 'manual'}
                 <ManualInputTab {formData} {isSubmitting} on:submit={handleSubmit} />
             {:else if activeTab === 'file'}
                 <div class="mb-6">

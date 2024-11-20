@@ -7,6 +7,15 @@
 <nav class="-mb-px flex space-x-8" aria-label="Tabs">
   <button
     class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+    {activeTab === 'chat' 
+      ? 'border-blue-500 text-blue-600'
+      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+    on:click={() => onTabChange('chat')}
+  >
+    내용 탐색기반 AI 채팅
+  </button>
+  <button
+    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
     {activeTab === 'manual' 
       ? 'border-blue-500 text-blue-600'
       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
