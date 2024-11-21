@@ -1,11 +1,15 @@
+<!-- src/routes/miraen/common-writing/CreateProblemModal.svelte -->
 <script>
   import { createEventDispatcher } from 'svelte';
   import { supabase } from '$lib/supabaseClient';
   import { generateProblem } from '$lib/problemGeneratorService';
+  import ModalHeader from './components/ModalHeader.svelte';
+  import ProblemTypeInput from './components/ProblemTypeInput.svelte';
 
   const dispatch = createEventDispatcher();
 
   let type = '';
+  let name = '';
   let content = '';
   let generatedContent = '';
   let modelAnswer = '';
@@ -20,13 +24,6 @@
       evaluation: '',
       feedback: ''
     }
-  ];
-
-  const defaultTypes = [
-    { id: 'sentence', label: '문장 완성하기' },
-    { id: 'paragraph', label: '문단 완성하기' },
-    { id: 'grammar', label: '문법 연습' },
-    { id: 'translation', label: '번역하기' }
   ];
 
   // 각 예시 답안의 토글 상태를 관리하는 배열
@@ -64,7 +61,12 @@
 
   async function handleSubmit() {
     if (!type.trim()) {
-      alert('문제 종류를 입력해주세요.');
+      alert('문제 종류를 선택해주세요.');
+      return;
+    }
+
+    if (!name.trim()) {
+      alert('문제 이름을 입력해주세요.');
       return;
     }
 
@@ -98,6 +100,7 @@
         .insert([
           {
             type: type.trim(),
+            name: name.trim(),
             content: generatedContent.trim(),
             model_answer: modelAnswer.trim(),
             example_answer: validExamples,
@@ -107,8 +110,9 @@
 
       if (error) throw error;
       
-      dispatch('close');
       alert('문제가 성공적으로 생성되었습니다.');
+      dispatch('success');
+      dispatch('close');
     } catch (error) {
       console.error('Error creating problem:', error);
       alert('문제 생성 중 오류가 발생했습니다.');
@@ -182,45 +186,29 @@
   }
 </script>
 
+<!-- 템플릿 시작: 모달 컨테이너 -->
 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
   <div class="bg-white rounded-lg max-w-2xl w-full p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-bold">새로운 문제 만들기</h2>
-      <button
-        class="text-gray-500 hover:text-gray-700"
-        on:click={() => dispatch('close')}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
+    <ModalHeader on:close={() => dispatch('close')} />
 
     <form on:submit|preventDefault={handleSubmit} class="space-y-4">
+      <ProblemTypeInput bind:type />
+
+      <!-- 문제 이름 입력 필드 추가 -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">
-          종류
+          문제 이름
         </label>
-        <div class="relative">
-          <input
-            type="text"
-            bind:value={type}
-            list="problem-types"
-            required
-            class="w-full border border-gray-300 rounded-md px-3 py-2"
-            placeholder="문제 종류를 선택하거나 입력하세요..."
-          />
-          <datalist id="problem-types">
-            {#each defaultTypes as option}
-              <option value={option.id}>{option.label}</option>
-            {/each}
-          </datalist>
-        </div>
-        <p class="mt-1 text-sm text-gray-500">
-          기존 종류를 선택하거나 새로운 종류를 입력할 수 있습니다
-        </p>
+        <input
+          type="text"
+          bind:value={name}
+          required
+          class="w-full border border-gray-300 rounded-md px-3 py-2"
+          placeholder="문제의 이름을 입력하세요..."
+        />
       </div>
 
+      <!-- 예시 문제 입력 섹션 -->
       <div>
         <div class="flex items-center justify-between mb-1">
           <label class="block text-sm font-medium text-gray-700">
@@ -246,7 +234,7 @@
                     on:click={() => {
                       exampleProblem = `문제: Claire is the girl _______. (ride a red bike)
 
-���시 답안:
+예시 답안:
 1. Claire is the girl who is riding a red bike.
 2. Claire is the girl who rides a red bike.
 3. Claire is the girl that is riding a red bike.`;
@@ -295,6 +283,7 @@ After that, _________________. I can't wait for this amazing summer vacation!
         ></textarea>
       </div>
 
+      <!-- 문제 생성 요청 섹션 -->
       <div>
         <div class="flex items-center justify-between mb-1">
           <label class="block text-sm font-medium text-gray-700">
@@ -349,6 +338,7 @@ After that, _________________. I can't wait for this amazing summer vacation!
         </div>
       </div>
 
+      <!-- 문항 내용 입력 섹션 -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">
           문항 내용
@@ -360,6 +350,7 @@ After that, _________________. I can't wait for this amazing summer vacation!
         ></textarea>
       </div>
 
+      <!-- 모범답안 입력 섹션 -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">
           모범답안
@@ -372,7 +363,9 @@ After that, _________________. I can't wait for this amazing summer vacation!
         ></textarea>
       </div>
 
+      <!-- 예시 답안 섹션 -->
       <div class="space-y-4 mt-4">
+        <!-- 예시 답안 헤더 -->
         <div class="flex justify-between items-center">
           <label class="block text-sm font-medium text-gray-700">
             예시 답안
@@ -389,7 +382,9 @@ After that, _________________. I can't wait for this amazing summer vacation!
           </button>
         </div>
 
+        <!-- 예시 답안 리스트 -->
         {#each examples as example, index}
+          <!-- 개별 예시 답안 카드 -->
           <div class="border rounded-lg p-4 relative">
             {#if examples.length > 1}
               <button
@@ -468,6 +463,7 @@ After that, _________________. I can't wait for this amazing summer vacation!
         {/each}
       </div>
 
+      <!-- 모달 푸터: 취소/저장 버튼 -->
       <div class="flex justify-end space-x-3 pt-4">
         <button
           type="button"
@@ -489,4 +485,5 @@ After that, _________________. I can't wait for this amazing summer vacation!
   </div>
 </div>
 
+<!-- 클릭 이벤트 핸들러 -->
 <svelte:window on:click={handleClickOutside} /> 

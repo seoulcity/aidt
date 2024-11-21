@@ -2,7 +2,8 @@
 <script>
   import { chatCompletion } from '$lib/clovaStudioService';
   import { modelAnswers } from '$lib/examples/modelAnswers';
-  import { sentenceExamples, generateSentencePrompt } from '$lib/examples/sentenceExamples';
+  import { sentenceExamples } from '$lib/examples/sentenceExamples';
+  import { writingPrompts } from '$lib/prompts/writingPrompts';
   
   export let title = '';
   export let description = '';
@@ -28,21 +29,10 @@
   // 기본 프롬프트 설정
   $: {
     if (taskType === 'custom') {
-      // 문장 완성하기의 프롬프트를 기본으로 사용
-      systemPrompt = `당신은 한국의 중학생을 위한 AI 영어 작문 튜터입니다. 
-학생의 답안을 평가하고 피드백을 제공해주세요.
-
-평가 기준:
-1. 전체적인 문장의 자연스러움
-2. 문법적 정확성
-3. 표현의 적절성
-
-다음 예시들을 참고하여 피드백을 제공하세요:
-
-${sentenceExamples.map(ex => `예시${ex.id})
+      systemPrompt = writingPrompts.sentence.system + '\n\n' + 
+        sentenceExamples.map(ex => `예시${ex.id})
 답안: "${ex.answer}"
-평가: ${ex.evaluation}
-피드백: "${ex.feedback}"`).join('\n\n')}`;
+피드백: "${ex.feedback}"`).join('\n\n');
 
       taskPrompt = `문제: ${problem}
 
@@ -85,25 +75,7 @@ ${sentenceExamples.map(ex => `예시${ex.id})
     showCorrected = true;
     
     try {
-      const correctionSystemPrompt = `당신은 영어 문장 교정 전문가입니다.
-학생의 답안과 모범답안을 비교하여 HTML 형식으로 차이점을 시각적으로 표시해주세요.
-
-출력 형식:
-1. 수정이 필요한 부분은 <del> 태그로 표시
-2. 수정된/추가된 부분은 <ins> 태그로 표시
-3. 원본과 수정본을 구분하여 표시
-4. 수정 사항에 대한 설명 포함
-
-예시:
-<div class="original">
-  입력 답안: I <del>go</del> to school.
-</div>
-<div class="corrected">
-  수정된 답안: I <ins>went</ins> to school.
-</div>
-<div class="explanation">
-  과거 시제로 수정되었습니다.
-</div>`;
+      const correctionSystemPrompt = writingPrompts.sentence.correction;
 
       let modelAnswer = '';
       if (taskType === 'elementary') {
@@ -347,7 +319,7 @@ ${sentenceExamples.map(ex => `예시${ex.id})
       {#if isLoadingCorrection}
         <p class="mt-4">수정된 문장을 생성하는 중입니다...</p>
       {:else if showCorrected && correctedResult}
-        <div class="mt-4 p-4 bg-green-50 rounded">
+        <div class="mt-4 p-4 bg-green-50 rounded [&_del]:text-red-500 [&_del]:bg-red-100 [&_del]:line-through [&_ins]:text-green-600 [&_ins]:bg-green-100 [&_ins]:no-underline [&_.original]:my-4 [&_.original]:p-2 [&_.original]:rounded [&_.original]:bg-amber-100 [&_.corrected]:my-4 [&_.corrected]:p-2 [&_.corrected]:rounded [&_.corrected]:bg-emerald-50 [&_.explanation]:mt-4 [&_.explanation]:p-2 [&_.explanation]:rounded [&_.explanation]:bg-sky-100 [&_.explanation]:text-sky-800">
           <h4 class="font-bold mb-4">수정 사항 비교:</h4>
           {@html correctedResult}
         </div>
@@ -355,39 +327,3 @@ ${sentenceExamples.map(ex => `예시${ex.id})
     </div>
   {/if}
 </div>
-
-<style>
-  :global(del) {
-    color: #ef4444;
-    background-color: #fee2e2;
-    text-decoration: line-through;
-  }
-
-  :global(ins) {
-    color: #22c55e;
-    background-color: #dcfce7;
-    text-decoration: none;
-  }
-
-  :global(.original), :global(.corrected) {
-    margin: 1rem 0;
-    padding: 0.5rem;
-    border-radius: 0.25rem;
-  }
-
-  :global(.original) {
-    background-color: #fef3c7;
-  }
-
-  :global(.corrected) {
-    background-color: #ecfdf5;
-  }
-
-  :global(.explanation) {
-    margin-top: 1rem;
-    padding: 0.5rem;
-    background-color: #e0f2fe;
-    border-radius: 0.25rem;
-    color: #0369a1;
-  }
-</style> 
