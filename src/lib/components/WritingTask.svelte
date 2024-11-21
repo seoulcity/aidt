@@ -2,6 +2,7 @@
 <script>
   import { chatCompletion } from '$lib/clovaStudioService';
   import { modelAnswers } from '$lib/examples/modelAnswers';
+  import { sentenceExamples, generateSentencePrompt } from '$lib/examples/sentenceExamples';
   
   export let title = '';
   export let description = '';
@@ -12,6 +13,7 @@
   export let taskType = 'sentence';
   export let activeTab = '';
   export let evaluationAreas = [];
+  export let modelAnswer = '';
   
   let userInput = '';
   let result = '';
@@ -22,6 +24,31 @@
   let correctedResult = '';
   let isLoadingCorrection = false;
   let lastEvaluatedInput = '';
+
+  // 기본 프롬프트 설정
+  $: {
+    if (taskType === 'custom') {
+      // 문장 완성하기의 프롬프트를 기본으로 사용
+      systemPrompt = `당신은 한국의 중학생을 위한 AI 영어 작문 튜터입니다. 
+학생의 답안을 평가하고 피드백을 제공해주세요.
+
+평가 기준:
+1. 전체적인 문장의 자연스러움
+2. 문법적 정확성
+3. 표현의 적절성
+
+다음 예시들을 참고하여 피드백을 제공하세요:
+
+${sentenceExamples.map(ex => `예시${ex.id})
+답안: "${ex.answer}"
+평가: ${ex.evaluation}
+피드백: "${ex.feedback}"`).join('\n\n')}`;
+
+      taskPrompt = `문제: ${problem}
+
+예시 답안들과 평가 기준을 참고하여 학생의 답안을 평가해주세요.`;
+    }
+  }
 
   function setExample(example) {
     userInput = example.answer;
@@ -38,7 +65,7 @@
     isLoading = true;
     try {
       const response = await chatCompletion(systemPrompt, 
-        `${taskPrompt}\n\n학생 안: ${userInput}`);
+        `${taskPrompt}\n\n모범답안: ${modelAnswer || '없음'}\n\n학생 답안: ${userInput}`);
       result = response;
       lastEvaluatedInput = userInput;
     } catch (error) {
@@ -162,7 +189,9 @@
         >
           예시 {example.id}
           <span class="text-gray-400 text-xs">
-            ({example.evaluation})
+            {#if example.evaluation}
+              ({example.evaluation})
+            {/if}
           </span>
         </button>
       {/each}
