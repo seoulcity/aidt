@@ -1,5 +1,8 @@
 // src/hooks.server.js
 import { FileManager } from '$lib/utils/fileManager';
+import { dev } from '$app/environment';
+import fs from 'fs';
+import path from 'path';
 
 const fileManager = new FileManager();
 
@@ -13,5 +16,25 @@ setInterval(() => {
 
 /** @type {import('@sveltejs/kit').Handle} */
 export async function handle({ event, resolve }) {
-    return await resolve(event);
+  // Handle PDF.js worker file request
+  if (event.url.pathname === '/pdf.worker.min.js') {
+    const workerPath = dev
+      ? 'node_modules/pdfjs-dist/build/pdf.worker.min.js'
+      : 'node_modules/pdfjs-dist/build/pdf.worker.min.js';
+
+    try {
+      const workerFile = fs.readFileSync(path.resolve(process.cwd(), workerPath));
+      return new Response(workerFile, {
+        headers: {
+          'Content-Type': 'application/javascript',
+          'Cache-Control': 'public, max-age=31536000'
+        }
+      });
+    } catch (error) {
+      console.error('Error serving PDF worker file:', error);
+      return new Response('Worker file not found', { status: 404 });
+    }
+  }
+
+  return await resolve(event);
 } 

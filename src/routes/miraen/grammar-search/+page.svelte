@@ -36,7 +36,7 @@
   let editingData = null; // 수정 중인 데이터
   let selectedFile = null;
   let showPDFViewer = false;
-  let activeTab = 'manual'; // 'manual' 또는 'file'
+  let activeTab = 'chat'; // 'manual' 또는 'file'
   let isVectorizing = false; // 벡터화 중인지 여부
 
   async function loadEmbeddings() {

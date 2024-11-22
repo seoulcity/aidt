@@ -37,7 +37,7 @@
   let selectedElements = []; // 선택된 요소들을 저장할 변수
   
   if (browser) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
   }
 
   // 리사이즈 핸들러 추가
