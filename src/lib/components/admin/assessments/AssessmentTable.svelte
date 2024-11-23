@@ -1,8 +1,32 @@
 <script>
+    import { onMount, createEventDispatcher } from 'svelte';
     import DataTable from '$lib/components/common/DataTable.svelte';
-    import { assessmentTypes } from '$lib/data/admin';
+    import { getAssessmentTypes } from '$lib/api/assessmentTypes';
+    import { deleteAssessment } from '$lib/api/assessments';
     
     export let assessments = [];
+    
+    let assessmentTypes = [];
+    const dispatch = createEventDispatcher();
+
+    onMount(async () => {
+        try {
+            assessmentTypes = await getAssessmentTypes();
+        } catch (error) {
+            console.error('Failed to load assessment types:', error);
+        }
+    });
+
+    async function handleDelete(assessment) {
+        if (confirm('정말 삭제하시겠습니까?')) {
+            try {
+                await deleteAssessment(assessment.id);
+                dispatch('delete', assessment);
+            } catch (error) {
+                console.error('Failed to delete assessment:', error);
+            }
+        }
+    }
 
     const columns = [
         { key: 'title', label: '제목' },
@@ -15,7 +39,7 @@
             }
         },
         { 
-            key: 'questionCount', 
+            key: 'question_count', 
             label: '문항 수', 
             format: value => value ? `${value}문항` : '-'
         },
@@ -47,12 +71,12 @@
         { 
             label: '수정', 
             class: 'text-blue-600 hover:text-blue-800',
-            handler: (assessment) => console.log('수정:', assessment)
+            handler: (assessment) => dispatch('edit', assessment)
         },
         { 
             label: '삭제', 
             class: 'text-red-600 hover:text-red-800',
-            handler: (assessment) => console.log('삭제:', assessment)
+            handler: handleDelete
         }
     ];
 </script>
@@ -60,5 +84,5 @@
 <DataTable
     columns={columns}
     data={assessments}
-    actions={actions}
+    {actions}
 /> 

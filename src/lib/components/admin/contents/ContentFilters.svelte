@@ -1,10 +1,20 @@
 <script>
+    import { onMount } from 'svelte';
     import SearchFilters from '$lib/components/common/SearchFilters.svelte';
-    import { contentTypes } from '$lib/data/admin';
+    import { getContentTypes } from '$lib/api/contentTypes';
 
     export let values;
+    let contentTypes = [];
 
-    const filters = [
+    onMount(async () => {
+        try {
+            contentTypes = await getContentTypes();
+        } catch (error) {
+            console.error('Failed to load content types:', error);
+        }
+    });
+
+    $: filters = [
         {
             key: 'type',
             placeholder: '유형 선택',

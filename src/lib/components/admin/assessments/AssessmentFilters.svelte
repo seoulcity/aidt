@@ -1,10 +1,20 @@
 <script>
+    import { onMount } from 'svelte';
     import SearchFilters from '$lib/components/common/SearchFilters.svelte';
-    import { assessmentTypes } from '$lib/data/admin';
+    import { getAssessmentTypes } from '$lib/api/assessmentTypes';
 
     export let values;
+    let assessmentTypes = [];
 
-    const filters = [
+    onMount(async () => {
+        try {
+            assessmentTypes = await getAssessmentTypes();
+        } catch (error) {
+            console.error('Failed to load assessment types:', error);
+        }
+    });
+
+    $: filters = [
         {
             key: 'type',
             placeholder: '유형 선택',
