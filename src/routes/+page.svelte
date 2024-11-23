@@ -28,6 +28,13 @@
 			<h2 class="text-xl font-bold mb-2">영문법 검색형 서비스</h2>
 			<p class="text-sm text-gray-300">영문법을 쉽게 검색해보세요</p>
 		</a>
+		<a
+			href="/miraen/elementary-math"
+			class="bg-orange-500 hover:bg-orange-600 text-white rounded-lg p-6 text-center transition-colors duration-200 shadow-md"
+		>
+			<h2 class="text-xl font-bold mb-2">초등수학 대시보드</h2>
+			<p class="text-sm text-orange-100">초등수학 학습 현황을 확인해보세요</p>
+		</a>
 	</div>
 
 	<footer class="text-center mt-auto">
