@@ -31,7 +31,10 @@
 		"@langchain/core": "^0.3.18",
 		"cookie": "^1.0.1",
 		"dotenv": "^16.4.5",
+		"katex": "^0.16.11",
 		"langchain": "^0.3.5",
+		"mathjax": "^3.2.2",
+		"mathlive": "^0.102.0",
 		"pdfjs-dist": "^4.8.69",
 		"tailwind-scrollbar": "^3.1.0",
 		"zod": "^3.23.8"
