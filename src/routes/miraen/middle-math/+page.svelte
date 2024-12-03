@@ -5,8 +5,11 @@
   import 'katex/dist/katex.min.css';
   import { mathProblems } from '$lib/data/mathProblems.js';
 
-  let activeTab = 0;
   let katexLoaded = false;
+  let episodeGroups = groupProblemsByEpisode(mathProblems);
+  let activeEpisode = episodeGroups[0]?.episode || '';
+  let activeProblemId = episodeGroups[0]?.problems[0]?.id || null;
+
   let hints = mathProblems.map(() => ({
     currentStep: 0,
     allHints: null,
@@ -219,8 +222,9 @@
   }
 
   $: {
-    if (activeTab !== undefined) {
+    if (activeEpisode !== undefined || activeProblemId !== null) {
       Promise.resolve().then(async () => {
+        await tick();
         await renderMath();
       });
     }
@@ -230,62 +234,122 @@
     await loadKaTeX();
     await renderMath();
   });
+
+  function groupProblemsByEpisode(problems) {
+    const episodeMap = new Map();
+    
+    problems.forEach(problem => {
+      if (!episodeMap.has(problem.episode)) {
+        episodeMap.set(problem.episode, []);
+      }
+      episodeMap.get(problem.episode).push(problem);
+    });
+    
+    return Array.from(episodeMap.entries()).map(([episode, problems]) => ({
+      episode,
+      problems
+    }));
+  }
+
+  // 에피소드 변경 핸들러
+  function handleEpisodeChange(episode, firstProblemId) {
+    activeEpisode = episode;
+    activeProblemId = firstProblemId;
+  }
+
+  // 문제 변경 핸들러
+  async function handleProblemChange(problemId) {
+    activeProblemId = problemId;
+    await tick();
+    await renderMath();
+  }
 </script>
 
-<div class="container mx-auto px-4 py-8 max-w-4xl">
+<div class="container mx-auto px-4 py-8">
   <h1 class="text-3xl font-bold mb-8 text-center">중등수학 맞춤추천</h1>
 
-  <div class="mb-6 flex space-x-2">
-    {#each mathProblems as _, i}
+  <!-- 에피소드 탭 -->
+  <div class="mb-6 flex space-x-2 overflow-x-auto pb-2">
+    {#each episodeGroups as group}
       <button
-        class="px-4 py-2 rounded-lg {activeTab === i ? 'bg-blue-500 text-white' : 'bg-gray-200'}"
-        on:click={() => activeTab = i}
+        class="px-4 py-2 whitespace-nowrap rounded-lg {
+          activeEpisode === group.episode 
+            ? 'bg-blue-500 text-white' 
+            : 'bg-gray-200 hover:bg-gray-300'
+        }"
+        on:click={() => handleEpisodeChange(group.episode, group.problems[0].id)}
       >
-        문제 {i + 1}
+        {group.episode}
       </button>
     {/each}
   </div>
 
-  {#each mathProblems as problem, i}
-    {#if activeTab === i}
-      <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <div class="mb-4">
-          <div class="math-container" data-content={problem.question.text}></div>
-        </div>
-
-        <div class="mt-6">
-          <button
-            class="px-4 py-2 rounded-lg mb-4 {hints[i].loading ? 'opacity-50 cursor-not-allowed' : ''} 
-                {getButtonText(i).disabled 
-                    ? 'bg-gray-400 text-white cursor-not-allowed' 
-                    : 'bg-green-500 hover:bg-green-600 text-white'}"
-            on:click={() => requestHint(i)}
-            disabled={hints[i].loading || getButtonText(i).disabled}
-          >
-            {hints[i].loading ? '힌트 불러오는 중...' : getButtonText(i).text}
-          </button>
-
-          {#if hints[i].allHints}
-            <div class="space-y-4">
-                {#each hints[i].allHints.slice(0, hints[i].currentStep + 1) as hint, index}
-                    <div class="bg-gray-50 p-4 rounded-lg" 
-                         class:animate-fade-in={index === hints[i].currentStep}>
-                        <h3 class="font-semibold mb-2">힌트 {hint.step}</h3>
-                        <div class="math-container" data-content={hint.content}></div>
-                    </div>
-                {/each}
-            </div>
-          {/if}
-
-          {#if hints[i].error}
-            <div class="text-red-500 mt-2">
-              {hints[i].error}
-            </div>
-          {/if}
-        </div>
+  <!-- 현재 에피소드의 문제 탭 -->
+  {#if activeEpisode}
+    <div class="mb-6">
+      <div class="border-b border-gray-200">
+        <nav class="-mb-px flex flex-wrap gap-2">
+          {#each episodeGroups.find(g => g.episode === activeEpisode).problems as problem}
+            <button
+              class={`py-2 px-4 border-b-2 font-medium text-sm ${
+                activeProblemId === problem.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+              on:click={() => handleProblemChange(problem.id)}
+            >
+              문제 {problem.id}
+            </button>
+          {/each}
+        </nav>
       </div>
+    </div>
+
+    <!-- 선택된 문제 표시 -->
+    {#if activeProblemId}
+      {#each episodeGroups.find(g => g.episode === activeEpisode).problems as problem}
+        {#if activeProblemId === problem.id}
+          <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="mb-4">
+              <div class="math-container" data-content={problem.question.text}></div>
+            </div>
+
+            <div class="mt-6">
+              <button
+                class="px-4 py-2 rounded-lg mb-4 {hints[problem.id - 1].loading ? 'opacity-50 cursor-not-allowed' : ''} 
+                    {getButtonText(problem.id - 1).disabled 
+                        ? 'bg-gray-400 text-white cursor-not-allowed' 
+                        : 'bg-green-500 hover:bg-green-600 text-white'}"
+                on:click={() => requestHint(problem.id - 1)}
+                disabled={hints[problem.id - 1].loading || getButtonText(problem.id - 1).disabled}
+              >
+                {hints[problem.id - 1].loading ? '힌트 불러오는 중...' : getButtonText(problem.id - 1).text}
+              </button>
+
+              <!-- 힌트 표시 부분 -->
+              {#if hints[problem.id - 1].allHints}
+                <div class="space-y-4">
+                  {#each hints[problem.id - 1].allHints.slice(0, hints[problem.id - 1].currentStep + 1) as hint, index}
+                    <div class="bg-gray-50 p-4 rounded-lg" 
+                         class:animate-fade-in={index === hints[problem.id - 1].currentStep}>
+                      <h3 class="font-semibold mb-2">힌트 {hint.step}</h3>
+                      <div class="math-container" data-content={hint.content}></div>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+
+              {#if hints[problem.id - 1].error}
+                <div class="text-red-500 mt-2">
+                  {hints[problem.id - 1].error}
+                </div>
+              {/if}
+            </div>
+          </div>
+        {/if}
+      {/each}
     {/if}
-  {/each}
+  {/if}
 </div>
 
 <style>
