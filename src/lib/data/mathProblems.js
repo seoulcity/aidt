@@ -1,3 +1,4 @@
+// src/lib/data/mathProblems.js
 export const mathProblems = [
   {
     id: 1,

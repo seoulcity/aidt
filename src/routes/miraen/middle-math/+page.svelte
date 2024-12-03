@@ -1,3 +1,4 @@
+<!-- src/routes/miraen/middle-math/+page.svelte -->
 <script>
   import { onMount } from 'svelte';
   import { tick } from 'svelte';
@@ -7,17 +8,33 @@
   let activeTab = 0;
   let katexLoaded = false;
   let hints = mathProblems.map(() => ({
-    currentHint: 0,
-    hintTexts: [],
-    loading: false
+    currentStep: 0,
+    allHints: null,
+    loading: false,
+    error: null
   }));
 
   const buttonTexts = ['힌트 보기', '힌트 더 보기', '마지막 힌트 보기'];
 
   function getButtonText(problemIndex) {
-    const hintCount = hints[problemIndex].hintTexts.length;
-    if (hintCount >= 3) return null;
-    return buttonTexts[hintCount];
+    const currentStep = hints[problemIndex].currentStep;
+    console.log('버튼 텍스트 결정:', {
+        problemIndex,
+        currentStep,
+        hasAllHints: hints[problemIndex].allHints !== null,
+        totalHints: hints[problemIndex].allHints?.length
+    });
+    
+    if (currentStep >= 2) {
+        return {
+            text: '힌트 모두 제공됨',
+            disabled: true
+        };
+    }
+    return {
+        text: buttonTexts[currentStep],
+        disabled: false
+    };
   }
 
   async function loadKaTeX() {
@@ -106,34 +123,65 @@
 
   async function requestHint(problemIndex) {
     if (hints[problemIndex].loading) return;
-    if (hints[problemIndex].hintTexts.length >= 3) return;
+    if (hints[problemIndex].currentStep >= 3) return;
+
+    // 이미 힌트를 받아온 경우 다음 단계만 보여줌
+    if (hints[problemIndex].allHints) {
+        console.log('기존 힌트 데이터:', {
+            currentStep: hints[problemIndex].currentStep,
+            allHints: hints[problemIndex].allHints,
+            nextStep: hints[problemIndex].currentStep + 1
+        });
+        
+        hints[problemIndex].currentStep += 1;
+        hints = [...hints];
+        
+        console.log('힌트 단계 증가 후:', {
+            currentStep: hints[problemIndex].currentStep,
+            visibleHints: hints[problemIndex].allHints.slice(0, hints[problemIndex].currentStep + 1)
+        });
+
+        await tick();
+        await renderMath();
+        return;
+    }
 
     hints[problemIndex].loading = true;
     hints = [...hints];
 
     try {
-      const response = await fetch('/api/math-hint', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          problem: mathProblems[problemIndex],
-          hintLevel: hints[problemIndex].hintTexts.length
-        })
-      });
+        const response = await fetch('/api/math-hint', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                problem: mathProblems[problemIndex]
+            })
+        });
 
-      if (!response.ok) throw new Error('Hint request failed');
-      const data = await response.json();
-      hints[problemIndex].hintTexts = [...hints[problemIndex].hintTexts, data.hint];
-      
-      await tick();
-      await renderMath();
+        if (!response.ok) throw new Error('Hint request failed');
+        const data = await response.json();
+        
+        console.log('API 응답 데이터:', data);
+        console.log('받아온 힌트 개수:', data.hints?.length);
+        
+        hints[problemIndex].allHints = data.hints;
+        hints[problemIndex].currentStep = 0;
+        
+        console.log('초기 힌트 설정:', {
+            currentStep: hints[problemIndex].currentStep,
+            visibleHints: hints[problemIndex].allHints.slice(0, hints[problemIndex].currentStep + 1)
+        });
+        
+        await tick();
+        await renderMath();
     } catch (error) {
-      console.error('Error fetching hint:', error);
+        console.error('Error fetching hint:', error);
+        hints[problemIndex].error = error.message;
     } finally {
-      hints[problemIndex].loading = false;
-      hints = [...hints];
+        hints[problemIndex].loading = false;
+        hints = [...hints];
     }
   }
 
@@ -173,24 +221,32 @@
         </div>
 
         <div class="mt-6">
-          {#if getButtonText(i)}
-            <button
-              class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg mb-4 {hints[i].loading ? 'opacity-50 cursor-not-allowed' : ''}"
-              on:click={() => requestHint(i)}
-              disabled={hints[i].loading}
-            >
-              {hints[i].loading ? '힌트 불러오는 중...' : getButtonText(i)}
-            </button>
+          <button
+            class="px-4 py-2 rounded-lg mb-4 {hints[i].loading ? 'opacity-50 cursor-not-allowed' : ''} 
+                {getButtonText(i).disabled 
+                    ? 'bg-gray-400 text-white cursor-not-allowed' 
+                    : 'bg-green-500 hover:bg-green-600 text-white'}"
+            on:click={() => requestHint(i)}
+            disabled={hints[i].loading || getButtonText(i).disabled}
+          >
+            {hints[i].loading ? '힌트 불러오는 중...' : getButtonText(i).text}
+          </button>
+
+          {#if hints[i].allHints}
+            <div class="space-y-4">
+                {#each hints[i].allHints.slice(0, hints[i].currentStep + 1) as hint, index}
+                    <div class="bg-gray-50 p-4 rounded-lg" 
+                         class:animate-fade-in={index === hints[i].currentStep}>
+                        <h3 class="font-semibold mb-2">힌트 {hint.step}</h3>
+                        <div class="math-container" data-content={hint.content}></div>
+                    </div>
+                {/each}
+            </div>
           {/if}
 
-          {#if hints[i].hintTexts.length > 0}
-            <div class="space-y-4">
-              {#each hints[i].hintTexts as hint, hintIndex}
-                <div class="bg-gray-50 p-4 rounded-lg">
-                  <h3 class="font-semibold mb-2">힌트 {hintIndex + 1}</h3>
-                  <div class="math-container" data-content={hint}></div>
-                </div>
-              {/each}
+          {#if hints[i].error}
+            <div class="text-red-500 mt-2">
+              {hints[i].error}
             </div>
           {/if}
         </div>
@@ -215,5 +271,14 @@
 
   :global(.math-container .text) {
     margin: 0 0.2em;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 </style> 
