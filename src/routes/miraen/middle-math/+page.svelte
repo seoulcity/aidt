@@ -4,6 +4,7 @@
   import { tick } from 'svelte';
   import 'katex/dist/katex.min.css';
   import { mathProblems } from '$lib/data/mathProblems.js';
+  import { slide } from 'svelte/transition';
 
   let katexLoaded = false;
   let episodeGroups = groupProblemsByEpisode(mathProblems);
@@ -59,7 +60,7 @@
   function splitTextAndLatex(text) {
     const parts = [];
     let lastIndex = 0;
-    const regex = /\\[\(\[](.+?)\\[\)\]]/g;
+    const regex = /\\[\(\[]((?:[^\\]|\\(?!\)|])|\\[^\)\]])*?)\\[\)\]]/g;
     let match;
 
     while ((match = regex.exec(text)) !== null) {
@@ -136,7 +137,7 @@
         return;
     }
     if (hints[problemIndex].currentStep >= 3) {
-        console.log('모든 힌트가 이미 표시됨');
+        console.log('모든 힌트가 미 표시됨');
         return;
     }
 
@@ -231,6 +232,7 @@
   }
 
   onMount(async () => {
+    showExplanations = mathProblems.map(() => false);
     await loadKaTeX();
     await renderMath();
   });
@@ -253,19 +255,36 @@
 
   // 에피소드 변경 핸들러
   function handleEpisodeChange(episode, firstProblemId) {
+    // 에피소드 변경 시 모든 풀이 상태를 숨김
+    showExplanations = showExplanations.map(() => false);
     activeEpisode = episode;
     activeProblemId = firstProblemId;
   }
 
   // 문제 변경 핸들러
   async function handleProblemChange(problemId) {
+    // 이전 문제의 풀이 상태를 숨김
+    showExplanations = showExplanations.map(() => false);
     activeProblemId = problemId;
+    await tick();
+    await renderMath();
+  }
+
+  // 풀이 표시 상태를 관리하기 위한 배열 추가
+  let showExplanations = mathProblems.map(() => false);
+
+  // 풀이 토글 함수 추가
+  async function toggleExplanation(index) {
+    // 다른 문제의 풀이는 모두 숨기고 현재 문제의 풀이만 토글
+    showExplanations = showExplanations.map((_, i) => i === index ? !showExplanations[i] : false);
+    
+    // 풀이가 표시될 때 LaTeX 렌더링
     await tick();
     await renderMath();
   }
 </script>
 
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 max-w-4xl">
   <h1 class="text-3xl font-bold mb-8 text-center">중등수학 맞춤추천</h1>
 
   <!-- 에피소드 탭 -->
@@ -284,7 +303,7 @@
     {/each}
   </div>
 
-  <!-- 현재 에피소드의 문제 탭 -->
+  <!-- 문제 탭 -->
   {#if activeEpisode}
     <div class="mb-6">
       <div class="border-b border-gray-200">
@@ -310,10 +329,34 @@
       {#each episodeGroups.find(g => g.episode === activeEpisode).problems as problem}
         {#if activeProblemId === problem.id}
           <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <div class="mb-4">
-              <div class="math-container" data-content={problem.question.text}></div>
+            <!-- 문제 번 -->
+            <div class="text-lg font-semibold mb-4 text-blue-600">
+              문제 {problem.id}
             </div>
 
+            <!-- 문제 내용 -->
+            <div class="mb-6">
+              <!-- 문제 텍스트를 보기와 구분하여 표시 -->
+              {#if problem.question.text.includes('【보기】')}
+                <!-- 보기가 있는 경우 -->
+                <div class="mb-4 whitespace-pre-line">
+                  {problem.question.text.split('【보기】')[0]}
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                  <div class="font-semibold mb-2">【보기】</div>
+                  <div class="math-container whitespace-pre-line pl-4" 
+                       data-content={problem.question.text.split('【보기】')[1]}>
+                  </div>
+                </div>
+              {:else}
+                <!-- 일반 문제의 경우 -->
+                <div class="math-container whitespace-pre-line" 
+                     data-content={problem.question.text}>
+                </div>
+              {/if}
+            </div>
+
+            <!-- 힌트 버튼 -->
             <div class="mt-6">
               <button
                 class="px-4 py-2 rounded-lg mb-4 {hints[problem.id - 1].loading ? 'opacity-50 cursor-not-allowed' : ''} 
@@ -326,14 +369,16 @@
                 {hints[problem.id - 1].loading ? '힌트 불러오는 중...' : getButtonText(problem.id - 1).text}
               </button>
 
-              <!-- 힌트 표시 부분 -->
+              <!-- 힌트 표시 -->
               {#if hints[problem.id - 1].allHints}
                 <div class="space-y-4">
                   {#each hints[problem.id - 1].allHints.slice(0, hints[problem.id - 1].currentStep + 1) as hint, index}
                     <div class="bg-gray-50 p-4 rounded-lg" 
                          class:animate-fade-in={index === hints[problem.id - 1].currentStep}>
-                      <h3 class="font-semibold mb-2">힌트 {hint.step}</h3>
-                      <div class="math-container" data-content={hint.content}></div>
+                      <h3 class="font-semibold mb-2 text-green-600">힌트 {hint.step}</h3>
+                      <div class="math-container whitespace-pre-line" 
+                           data-content={hint.content}>
+                      </div>
                     </div>
                   {/each}
                 </div>
@@ -346,36 +391,59 @@
               {/if}
             </div>
           </div>
+
+          <!-- 풀이를 별도의 카드로 분리 -->
+          {#if problem.explanation}
+            <div class="bg-white rounded-lg shadow-lg p-6">
+              <button
+                class="w-full flex justify-between items-center py-2 text-left font-semibold text-gray-700 hover:text-gray-900"
+                on:click={() => toggleExplanation(problem.id - 1)}
+              >
+                <span>풀이 보기</span>
+                <svg
+                  class="w-5 h-5 transform transition-transform duration-200 {showExplanations[problem.id - 1] ? 'rotate-180' : ''}"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+              {#if showExplanations[problem.id - 1]}
+                <div 
+                  class="math-container mt-4 pt-4 border-t border-gray-200 leading-relaxed whitespace-pre-line" 
+                  data-content={problem.explanation}
+                  transition:slide
+                  on:introend={renderMath}
+                >
+                </div>
+              {/if}
+            </div>
+          {/if}
         {/if}
       {/each}
     {/if}
   {/if}
 </div>
 
+<!-- KaTeX 관련 스타일을 Tailwind 클래스로 대체 -->
+<div class="hidden">
+  <div class="text-lg leading-7"></div> <!-- katex 기본 크기 대체 -->
+  <div class="overflow-x-auto overflow-y-hidden my-2"></div> <!-- katex-display 대체 -->
+  <div class="leading-relaxed"></div> <!-- math-container 대체 -->
+  <div class="max-w-full overflow-x-auto overflow-y-hidden"></div> <!-- katex-html 대체 -->
+  <div class="animate-[fadeIn_0.5s_ease-in]"></div> <!-- animate-fade-in 대체 -->
+  <div class="whitespace-pre-line"></div> <!-- whitespace-pre-line 대체 -->
+</div>
+
 <style>
+  /* KaTeX 기본 스타일만 유지 (Tailwind로 대체할 수 없는 부분) */
   :global(.katex) {
     font-size: 1.2em;
-  }
-  
-  :global(.katex-display) {
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-
-  :global(.math-container) {
-    line-height: 1.5;
-  }
-
-  :global(.math-container .text) {
-    margin: 0 0.2em;
-  }
-
-  .animate-fade-in {
-    animation: fadeIn 0.5s ease-in;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
   }
 </style> 
