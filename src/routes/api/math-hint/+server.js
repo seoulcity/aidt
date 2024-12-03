@@ -4,8 +4,15 @@ import { CLOVA_STUDIO_API_URL, CLOVA_STUDIO_API_KEY, CLOVA_STUDIO_APIGW_KEY } fr
 
 export async function POST({ request }) {
     try {
-        const { problem } = await request.json();
+        const requestData = await request.json();
+        console.log('API 요청 데이터:', requestData);
         
+        const { problem } = requestData;
+        if (!problem || !problem.question) {
+            console.error('잘못된 요청 데이터:', requestData);
+            throw new Error('올바른 문제 데이터가 제공되지 않았습니다.');
+        }
+
         const systemPrompt = `당신은 수학 문제의 단계별 힌트를 제공하는 AI입니다.
 반드시 아래 JSON 형식으로 3단계 힌트를 제공해야 합니다:
 
@@ -56,6 +63,12 @@ export async function POST({ request }) {
             includeAiFilters: true
         };
 
+        console.log('CLOVA Studio 요청 데이터:', {
+            systemPrompt,
+            userPrompt,
+            requestBody: clovaRequestBody
+        });
+
         const response = await fetch(CLOVA_STUDIO_API_URL, {
             method: 'POST',
             headers: {
@@ -66,32 +79,39 @@ export async function POST({ request }) {
             body: JSON.stringify(clovaRequestBody),
         });
 
+        const responseText = await response.text();
+        console.log('CLOVA Studio 원본 응답:', responseText);
+
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('CLOVA Studio API Error Response:', {
+            console.error('CLOVA Studio API 오류:', {
                 status: response.status,
                 statusText: response.statusText,
-                body: errorText
+                body: responseText
             });
-            throw new Error(`CLOVA Studio API Error: ${response.status} ${response.statusText}\n${errorText}`);
+            throw new Error(`CLOVA Studio API 오류: ${response.status} ${response.statusText}`);
         }
 
-        const data = await response.json();
-        console.log('CLOVA Studio API Response:', data);
-        
-        if (!data.result || !data.result.message || !data.result.message.content) {
-            console.error('Invalid response format:', data);
-            throw new Error('Invalid response format from CLOVA Studio API');
+        const data = JSON.parse(responseText);
+        console.log('파싱된 CLOVA Studio 응답:', data);
+
+        if (!data.result?.message?.content) {
+            console.error('잘못된 응답 형식:', data);
+            throw new Error('CLOVA Studio API가 올바른 형식으로 응답하지 않았습니다.');
         }
 
         // API 응답에서 JSON 문자열을 파싱
-        const hintData = JSON.parse(data.result.message.content);
-        
+        const hintContent = data.result.message.content;
+        console.log('힌트 콘텐츠:', hintContent);
+
+        const hintData = JSON.parse(hintContent);
+        console.log('파싱된 힌트 데이터:', hintData);
+
         return json(hintData);
     } catch (error) {
-        console.error('힌트 생성 오류:', {
+        console.error('힌트 생성 상세 오류:', {
+            name: error.name,
             message: error.message,
-            stack: error.stack
+            stack: error.stack,
         });
         return new Response(JSON.stringify({ 
             error: error.message,

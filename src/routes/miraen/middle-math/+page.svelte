@@ -122,12 +122,24 @@
   }
 
   async function requestHint(problemIndex) {
-    if (hints[problemIndex].loading) return;
-    if (hints[problemIndex].currentStep >= 3) return;
+    console.log('힌트 요청 시작:', {
+        problemIndex,
+        problem: mathProblems[problemIndex],
+        currentState: hints[problemIndex]
+    });
+
+    if (hints[problemIndex].loading) {
+        console.log('이미 로딩 중');
+        return;
+    }
+    if (hints[problemIndex].currentStep >= 3) {
+        console.log('모든 힌트가 이미 표시됨');
+        return;
+    }
 
     // 이미 힌트를 받아온 경우 다음 단계만 보여줌
     if (hints[problemIndex].allHints) {
-        console.log('기존 힌트 데이터:', {
+        console.log('기존 힌트 데이터 사용:', {
             currentStep: hints[problemIndex].currentStep,
             allHints: hints[problemIndex].allHints,
             nextStep: hints[problemIndex].currentStep + 1
@@ -136,7 +148,7 @@
         hints[problemIndex].currentStep += 1;
         hints = [...hints];
         
-        console.log('힌트 단계 증가 후:', {
+        console.log('힌트 단계 증가 후 상태:', {
             currentStep: hints[problemIndex].currentStep,
             visibleHints: hints[problemIndex].allHints.slice(0, hints[problemIndex].currentStep + 1)
         });
@@ -146,10 +158,14 @@
         return;
     }
 
-    hints[problemIndex].loading = true;
-    hints = [...hints];
-
     try {
+        hints[problemIndex].loading = true;
+        hints = [...hints];
+
+        console.log('API 요청 준비:', {
+            problem: mathProblems[problemIndex]
+        });
+
         const response = await fetch('/api/math-hint', {
             method: 'POST',
             headers: {
@@ -160,24 +176,41 @@
             })
         });
 
-        if (!response.ok) throw new Error('Hint request failed');
+        console.log('API 응답 상태:', {
+            ok: response.ok,
+            status: response.status,
+            statusText: response.statusText
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('API 오류 응답:', errorText);
+            throw new Error('힌트 요청 실패: ' + errorText);
+        }
+
         const data = await response.json();
-        
         console.log('API 응답 데이터:', data);
-        console.log('받아온 힌트 개수:', data.hints?.length);
         
+        if (!data.hints || !Array.isArray(data.hints)) {
+            console.error('잘못된 힌트 데이터:', data);
+            throw new Error('서버에서 올바른 힌트 데이터를 받지 못했습니다.');
+        }
+
         hints[problemIndex].allHints = data.hints;
         hints[problemIndex].currentStep = 0;
         
-        console.log('초기 힌트 설정:', {
+        console.log('힌트 상태 업데이트 완료:', {
             currentStep: hints[problemIndex].currentStep,
-            visibleHints: hints[problemIndex].allHints.slice(0, hints[problemIndex].currentStep + 1)
+            allHints: hints[problemIndex].allHints
         });
         
         await tick();
         await renderMath();
     } catch (error) {
-        console.error('Error fetching hint:', error);
+        console.error('힌트 요청 오류:', {
+            message: error.message,
+            stack: error.stack
+        });
         hints[problemIndex].error = error.message;
     } finally {
         hints[problemIndex].loading = false;
