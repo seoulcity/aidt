@@ -285,7 +285,7 @@
 </script>
 
 <div class="container mx-auto px-4 py-8 max-w-4xl">
-  <h1 class="text-3xl font-bold mb-8 text-center">중등수학 맞춤추천</h1>
+  <h1 class="text-3xl font-bold mb-8 text-center">중등수학 맞춤추천(문항)</h1>
 
   <!-- 에피소드 탭 -->
   <div class="mb-6 flex space-x-2 overflow-x-auto pb-2">

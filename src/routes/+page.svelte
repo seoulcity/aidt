@@ -32,7 +32,7 @@
 			href="/miraen/middle-math"
 			class="bg-orange-500 hover:bg-orange-600 text-white rounded-lg p-6 text-center transition-colors duration-200 shadow-md"
 		>
-			<h2 class="text-xl font-bold mb-2">중등수학 맞춤추천</h2>
+			<h2 class="text-xl font-bold mb-2">중등수학 맞춤추천(문항)</h2>
 			<p class="text-sm text-orange-100">맞춤형 수학 문제 힌트를 받아보세요</p>
 		</a>
 		<a

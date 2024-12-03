@@ -14,6 +14,8 @@ export async function POST({ request }) {
         }
 
         const systemPrompt = `당신은 수학 문제의 단계별 힌트를 제공하는 AI입니다.
+문제의 풀이 과정을 바탕으로 학생들이 스스로 해결할 수 있도록 단계적인 힌트를 제공해야 합니다.
+
 반드시 아래 JSON 형식으로 3단계 힌트를 제공해야 합니다:
 
 {
@@ -37,11 +39,13 @@ export async function POST({ request }) {
 1. 모든 수식은 반드시 LaTeX 형식으로 \\(...\\) 안에 작성
 2. 직접적인 답을 알려주지 않음
 3. 정확히 위 JSON 형식을 따를 것
+4. 풀이 내용을 바탕으로 단계적 힌트 제공
 
 현재 문제: ${problem.question.text}
-정답: ${problem.answer}`;
+정답: ${problem.answer}
+풀이: ${problem.explanation || '풀이 없음'}`;
 
-        const userPrompt = `위 문제에 대한 3단계 힌트를 정확한 JSON 형식으로 제공해주세요.`;
+        const userPrompt = `위 문제의 풀이를 바탕으로 3단계 힌트를 제공해주세요. 각 단계는 이전 단계보다 더 구체적인 도움을 주되, 답을 직접 알려주지는 마세요.`;
 
         const clovaRequestBody = {
             messages: [
