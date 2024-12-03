@@ -97,13 +97,13 @@ export const mathProblems = [
     {
       "id": 8,
       "question": {
-        "text": "다음 분수를 소수로 나타내고, 그 소수가 유한소수이면 '유', 무한소수이면 '무'를 쓰시오.\n\n\\(\\mathrm{\\dfrac{4}{9}=\\bbox[2px,border:1px solid #000000;]{\\mathrm{~ﾠ}}}\\)",
+        "text": "다음 분수를 소수로 나타내고, 그 소수가 유한소수이면 '유', 무한소수이면 '무'를 쓰시오.\n\n\\(\\dfrac{4}{9}=\\boxed{\\phantom{0.\\dot{4}}}\\)",
         "latex": [
-          "\\mathrm{\\dfrac{4}{9}=\\bbox[2px,border:1px solid #000000;]{\\mathrm{~ﾠ}}}"
+          "\\dfrac{4}{9}=\\boxed{\\phantom{0.\\dot{4}}}"
         ]
       },
       "answer": "\\(0.\\dot{4}\\), 무",
-      "explanation": "\\(\\mathrm{\\dfrac{4}{9}=4÷9=\\bbox[2px,border:1px solid #000000;]{\\mathrm{0.\\dot{4}}}}\\)이므로 무한소수이다.",
+      "explanation": "\\(\\dfrac{4}{9}=4÷9=\\boxed{0.\\dot{4}}\\)이므로 무한소수이다.",
       "episode": "무한소수의 뜻"
     },
     {
