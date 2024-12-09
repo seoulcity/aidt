@@ -113,7 +113,7 @@
         <!-- 문제 표시 영역 -->
         <div class="col-span-9">
           {#if selectedTopic}
-            {#each getPaginatedProblems() as problem (problem.id)}
+            {#each getPaginatedProblems() as problem (problem.id + '-' + currentPage + '-' + selectedTopic)}
               <ProblemCard {problem} />
             {/each}
 
