@@ -270,7 +270,7 @@
     await renderMath();
   }
 
-  // 풀이 표시 상태를 관리하기 위한 배열 추가
+  // 풀이 표시 상태를 관리하기 위�� 배열 추가
   let showExplanations = mathProblems.map(() => false);
 
   // 풀이 토글 함수 추가
@@ -376,9 +376,14 @@
                     <div class="bg-gray-50 p-4 rounded-lg" 
                          class:animate-fade-in={index === hints[problem.id - 1].currentStep}>
                       <h3 class="font-semibold mb-2 text-green-600">힌트 {hint.step}</h3>
-                      <div class="math-container whitespace-pre-line" 
-                           data-content={hint.content}>
-                      </div>
+                      <!-- 마지막 힌트는 그대로 표시, 나머지는 LaTeX 렌더링 -->
+                      {#if hint.step === 3}
+                        <div class="whitespace-pre-line">{hint.content}</div>
+                      {:else}
+                        <div class="math-container whitespace-pre-line" 
+                             data-content={hint.content}>
+                        </div>
+                      {/if}
                     </div>
                   {/each}
                 </div>
