@@ -282,6 +282,30 @@
     await tick();
     await renderMath();
   }
+
+  // LaTeX 수식을 추출하고 렌더링하는 함수 추가
+  function renderLastHint(content) {
+    // LaTeX 수식 패턴 매칭
+    const parts = content.split(/(\\[\(\[].*?\\[\)\]])/g);
+    
+    return parts.map((part, index) => {
+      if (part.match(/^\\[\(\[]/)) {
+        // LaTeX 수식인 경우
+        return `<span class="math-container" data-content="${part}"></span>`;
+      } else {
+        // 일반 텍스트인 경우
+        return `<span>${part}</span>`;
+      }
+    }).join('');
+  }
+
+  // 원본 텍스트 표시 상태 관리
+  let showOriginalHints = mathProblems.map(() => false);
+
+  function toggleOriginalHint(index) {
+    showOriginalHints[index] = !showOriginalHints[index];
+    showOriginalHints = [...showOriginalHints];
+  }
 </script>
 
 <div class="container mx-auto px-4 py-8 max-w-4xl">
@@ -349,7 +373,7 @@
                   </div>
                 </div>
               {:else}
-                <!-- 일반 문제의 경우 -->
+                <!-- 일반 문제의 우 -->
                 <div class="math-container whitespace-pre-line" 
                      data-content={problem.question.text}>
                 </div>
@@ -375,10 +399,28 @@
                   {#each hints[problem.id - 1].allHints.slice(0, hints[problem.id - 1].currentStep + 1) as hint, index}
                     <div class="bg-gray-50 p-4 rounded-lg" 
                          class:animate-fade-in={index === hints[problem.id - 1].currentStep}>
-                      <h3 class="font-semibold mb-2 text-green-600">힌트 {hint.step}</h3>
-                      <!-- 마지막 힌트는 그대로 표시, 나머지는 LaTeX 렌더링 -->
+                      <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-semibold text-green-600">힌트 {hint.step}</h3>
+                        {#if hint.step === 3}
+                          <button 
+                            class="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
+                            on:click={() => toggleOriginalHint(problem.id - 1)}
+                          >
+                            {showOriginalHints[problem.id - 1] ? '렌더링된 답변 보기' : '답변 원본 보기'}
+                          </button>
+                        {/if}
+                      </div>
+                      
                       {#if hint.step === 3}
-                        <div class="whitespace-pre-line">{hint.content}</div>
+                        {#if showOriginalHints[problem.id - 1]}
+                          <!-- 원본 텍스트 표시 -->
+                          <div class="whitespace-pre-wrap font-mono text-sm bg-gray-100 p-3 rounded">
+                            {hint.content}
+                          </div>
+                        {:else}
+                          <!-- 렌더링된 답변 표시 -->
+                          {@html renderLastHint(hint.content)}
+                        {/if}
                       {:else}
                         <div class="math-container whitespace-pre-line" 
                              data-content={hint.content}>
@@ -447,8 +489,13 @@
 </div>
 
 <style>
-  /* KaTeX 기본 스타일만 유지 (Tailwind로 대체할 수 없는 부분) */
+  /* KaTeX 기본 타일만 유지 (Tailwind로 대체할 수 없는 부분) */
   :global(.katex) {
     font-size: 1.2em;
+  }
+
+  /* 원본 텍스트를 위한 스타일 추가 */
+  .whitespace-pre-wrap {
+    white-space: pre-wrap;
   }
 </style> 

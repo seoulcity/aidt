@@ -126,16 +126,44 @@ export async function POST({ request }) {
             console.log('=== 원본 힌트 콘텐츠 ===');
             console.log(hintContent);
 
-            // LaTeX 수식 이스케이프 처리
             try {
-                // JSON 파싱 전에 LaTeX 수식의 백슬래시를 추가로 이스케이프
-                hintContent = hintContent.replace(/\\(?!["])/g, '\\\\');
-                console.log('=== 이스케이프 처리된 힌트 콘텐츠 ===');
+                // 1. 따옴표 정규화
+                hintContent = hintContent.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2":');
+                
+                // 2. LaTeX 수식 이스케이프 처리
+                hintContent = hintContent.replace(/\\(?!["{])/g, '\\\\');
+                
+                // 3. 줄바꿈 문자 처리
+                hintContent = hintContent.replace(/\n\s*/g, ' ').trim();
+                
+                console.log('=== 전처리된 힌트 콘텐츠 ===');
                 console.log(hintContent);
 
-                const hintData = JSON.parse(hintContent);
+                let hintData;
+                try {
+                    hintData = JSON.parse(hintContent);
+                } catch (initialParseError) {
+                    // JSON 파싱 실패 시 복구 시도
+                    console.log('초기 파싱 실패, 복구 시도...');
+                    
+                    // 4. JSON 구조 복구 시도
+                    const hintsMatch = hintContent.match(/hints"?\s*:\s*\[(.*)\]/s);
+                    if (hintsMatch) {
+                        const hintsContent = hintsMatch[1];
+                        const reconstructedJSON = `{"hints":[${hintsContent}]}`;
+                        console.log('재구성된 JSON:', reconstructedJSON);
+                        hintData = JSON.parse(reconstructedJSON);
+                    } else {
+                        throw initialParseError;
+                    }
+                }
                 
-                // 파싱 후 다시 원래 형태로 복원
+                // 5. 파싱 후 데이터 검증
+                if (!Array.isArray(hintData?.hints) || hintData.hints.length !== 3) {
+                    throw new Error('힌트 데이터 형식이 올바르지 않습니다.');
+                }
+
+                // 6. 백슬래시 복원
                 hintData.hints = hintData.hints.map(hint => ({
                     ...hint,
                     content: hint.content.replace(/\\\\/g, '\\')
@@ -150,9 +178,9 @@ export async function POST({ request }) {
                     errorName: parseError.name,
                     errorMessage: parseError.message,
                     originalContent: data.result.message.content,
-                    escapedContent: hintContent
+                    processedContent: hintContent
                 });
-                throw new Error(`힌트 JSON 파싱 실패: ${parseError.message}`);
+                throw new Error(`힌트 JSON 파싱 실패: ${parseError.message}\n원본 콘텐츠: ${hintContent}`);
             }
         } catch (error) {
             console.error('전체 처리 실패:', {
