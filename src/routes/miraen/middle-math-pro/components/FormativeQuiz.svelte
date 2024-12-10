@@ -1,22 +1,41 @@
 <!-- src/routes/miraen/middle-math-pro/components/FormativeQuiz.svelte -->
-<script>
+<script lang="ts">
   import { parseXML } from '../utils/xmlParser';
   import { renderElement } from '../utils/renderElement';
   import ResultPopup from './ResultPopup.svelte';
 
-  export let classOrderTitles = [];
-  export let selectedClassOrderTitle = null;
-  export let formativeProblems = [];
-  export let totalEpisodes = 0;
+  interface Problem {
+    id: string;
+    episode: string;
+    problem: string;
+    activity_category: string;
+    userAnswer: boolean | null;
+  }
 
-  export let onClassOrderTitleSelect;
-  export let onAnswerSelect;
+  interface EpisodeResult {
+    episode: string;
+    problems: { isCorrect: boolean; answered: boolean }[];
+    correct: number;
+    total: number;
+  }
+
+  interface XMLElement {
+    type: string;
+    [key: string]: any;
+  }
+
+  export let classOrderTitles: string[] = [];
+  export let selectedClassOrderTitle: string | null = null;
+  export let formativeProblems: Problem[] = [];
+  export let totalEpisodes = 0;
+  export let onClassOrderTitleSelect: (event: Event) => void;
+  export let onAnswerSelect: (index: number, isCorrect: boolean) => void;
 
   let totalScore = 0;
   let showResultPopup = false;
-  let episodeResults = [];
+  let episodeResults: EpisodeResult[] = [];
 
-  function renderWithoutInputBox(elements) {
+  function renderWithoutInputBox(elements: XMLElement[]) {
     return elements.filter(element => element.type !== 'input')
       .map(renderElement)
       .join('');
@@ -167,7 +186,7 @@
                 <span class="text-sm text-gray-600">({problem.episode})</span>
               </div>
               <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                종류: {problem.activity_category}
+                {problem.activity_category}
               </span>
             </div>
             <div class="p-4 bg-gray-50 rounded min-h-[100px]">

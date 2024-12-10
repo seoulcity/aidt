@@ -1,18 +1,34 @@
 <!-- src/routes/miraen/middle-math-pro/components/RecommendedProblems.svelte -->
-<script>
+<script lang="ts">
   import { parseXML } from '../utils/xmlParser';
   import { renderElement } from '../utils/renderElement';
   import { fetchRecommendedProblems } from '../utils/recommendationService';
 
-  export let wrongEpisodes = [];
-  export let score = 0;
+  interface Problem {
+    episode: string;
+    activity_category: string;
+    problem: string;
+  }
+
+  interface RecommendationResponse {
+    problems: Problem[];
+    error?: unknown;
+  }
+
+  interface XMLElement {
+    type: string;
+    [key: string]: any;
+  }
+
+  export let wrongEpisodes: string[] = [];
+  export let score: number = 0;
 
   let loading = false;
   let showRecommendations = false;
-  let recommendedProblems = [];
+  let recommendedProblems: Problem[] = [];
 
   // 점수대별 추천 로직 설명
-  const getRecommendationStrategy = (score) => {
+  const getRecommendationStrategy = (score: number) => {
     if (score <= 40) {
       return {
         level: '하: 기초',
@@ -26,7 +42,7 @@
     } else {
       return {
         level: '상: 발전',
-        description: '틀린 에피소드의 "이해" 문제 1개와 함께, 더 높은 수준의 "추론"이나 "문��� 해결" 유형 문제를 최대 5개 추천합니다.'
+        description: '틀린 에피소드의 "이해" 문제 1개와 함께, 더 높은 수준의 "추론"이나 "문제 해결" 유형 문제를 최대 5개 추천합니다.'
       };
     }
   };
@@ -35,22 +51,26 @@
     loading = true;
     showRecommendations = true;
     try {
-      const { problems, error } = await fetchRecommendedProblems(wrongEpisodes, score);
-      if (!error) {
-        recommendedProblems = problems;
+      const response: RecommendationResponse = await fetchRecommendedProblems(wrongEpisodes, score);
+      if (!response.error) {
+        recommendedProblems = response.problems;
       }
     } finally {
       loading = false;
     }
   }
 
-  function renderWithoutInputBox(elements) {
+  function renderWithoutInputBox(elements: XMLElement[]) {
     return elements.filter(element => element.type !== 'input')
       .map(renderElement)
       .join('');
   }
 
   $: strategy = getRecommendationStrategy(score);
+  $: problemCounts = recommendedProblems.reduce((acc: Record<string, number>, problem) => {
+    acc[problem.activity_category] = (acc[problem.activity_category] || 0) + 1;
+    return acc;
+  }, {});
 </script>
 
 <div class="mt-6">
@@ -100,7 +120,17 @@
           </div>
         </div>
 
-        <h3 class="font-bold text-lg mb-4">맞춤 추천 문항</h3>
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold text-lg">맞춤 추천 문항</h3>
+          <div class="flex gap-2">
+            {#each Object.entries(problemCounts) as [category, count]}
+              <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm">
+                {category}: {count}문항
+              </span>
+            {/each}
+          </div>
+        </div>
+
         <div class="grid grid-cols-1 gap-4">
           {#each recommendedProblems as problem}
             <div class="p-4 bg-white rounded-lg shadow">
@@ -108,7 +138,7 @@
                 <div class="flex justify-between items-start">
                   <div class="flex items-center gap-2">
                     <span class="text-sm font-medium text-gray-600">
-                      에피소드: {problem.episode}
+                      {problem.episode}
                     </span>
                     {#if score > 70 && (problem.activity_category === '추론' || problem.activity_category === '문제 해결')}
                       <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">
@@ -117,7 +147,7 @@
                     {/if}
                   </div>
                   <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                    종류: {problem.activity_category}
+                    {problem.activity_category}
                   </span>
                 </div>
                 {#if score <= 70}

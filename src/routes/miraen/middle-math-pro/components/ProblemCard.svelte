@@ -5,14 +5,6 @@
   export let problem;
 </script>
 
-<style>
-  :global(.bbox-highlight) {
-    border: 2px solid #000;
-    padding: 2px;
-    border-radius: 2px;
-  }
-</style>
-
 <div class="mb-8 p-6 bg-white rounded-lg shadow-md">
   <div class="space-y-4">
     {#each [
@@ -30,4 +22,10 @@
       </div>
     {/each}
   </div>
-</div> 
+</div>
+
+<style>
+  :global(.bbox-highlight) {
+    @apply border-2 border-black p-0.5 rounded;
+  }
+</style> 
