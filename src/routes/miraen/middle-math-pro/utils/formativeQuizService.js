@@ -1,4 +1,4 @@
-// src/routes/miraen/middle-math-pro/services/formativeQuizService.js
+// src/routes/miraen/middle-math-pro/utils/formativeQuizService.js
 import { mathProSupabase } from '$lib/mathProSupabaseClient';
 
 export async function fetchFormativeProblems(classOrderTitle) {

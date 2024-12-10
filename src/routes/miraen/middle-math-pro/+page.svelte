@@ -136,13 +136,13 @@
         class="px-4 py-2 rounded-t-lg transition-colors duration-200 {!showFormativeAssessment ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}"
         on:click={handleRegularProblemSelect}
       >
-        전체 문제 목록(중등 수학2 / I. 수와 식 / 1. 유리수와 순환소수 / 1-2차시)
+        수학2 / I. 수와 식 / 1. 유리수와 순환소수
       </button>
       <button
         class="px-4 py-2 rounded-t-lg transition-colors duration-200 {showFormativeAssessment ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}"
         on:click={handleFormativeAssessmentSelect}
       >
-        1차시 형성평가 및 맞춤문항 추천
+        차시 형성평가 및 맞춤문항 추천
       </button>
     </div>
 
