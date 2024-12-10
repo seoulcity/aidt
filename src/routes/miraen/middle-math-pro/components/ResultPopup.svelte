@@ -1,12 +1,22 @@
 <!-- src/routes/miraen/middle-math-pro/components/ResultPopup.svelte -->
-<script>
+<script lang="ts">
   import RecommendedProblems from './RecommendedProblems.svelte';
 
+  interface FormativeProblem {
+    userAnswer: boolean | null;
+  }
+
+  interface EpisodeResult {
+    episode: string;
+    correct: number;
+    total: number;
+  }
+
   export let show = false;
-  export let onClose;
+  export let onClose: () => void;
   export let score = 0;
-  export let formativeProblems = [];
-  export let episodeResults = [];
+  export let formativeProblems: FormativeProblem[] = [];
+  export let episodeResults: EpisodeResult[] = [];
 
   $: wrongEpisodes = episodeResults
     .filter(result => result.correct < result.total)
@@ -62,7 +72,7 @@
                   정답: {result.correct}문제
                 </div>
                 <div class="text-red-600">
-                  오답: {result.total - result.correct}문제
+                  오답: {result.total - result.correct}��제
                 </div>
               </div>
             </div>

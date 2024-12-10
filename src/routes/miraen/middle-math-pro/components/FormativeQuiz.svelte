@@ -42,7 +42,7 @@
   }
 
   // 자동 답안 선택 함수
-  function autoSelectAnswers(correctPercentage) {
+  function autoSelectAnswers(correctPercentage: number) {
     const totalProblems = formativeProblems.length;
     const correctCount = Math.round(totalProblems * (correctPercentage / 100));
     
