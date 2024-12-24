@@ -179,7 +179,12 @@
     <div class="flex gap-6">
       <div class="flex-1 mt-6 grid grid-cols-2 gap-4">
         {#each formativeProblems as problem, index}
-          <div class="p-4 bg-white rounded-lg shadow">
+          <div class="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
+               on:click={() => {
+                 const url = `/miraen/middle-math-pro/chat?class=${encodeURIComponent(selectedClassOrderTitle)}`;
+                 window.location.href = url;
+               }}
+          >
             <div class="flex justify-between items-start mb-2">
               <div class="flex items-center gap-2">
                 <span class="font-bold">문제 {index + 1}</span>

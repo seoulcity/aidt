@@ -18,7 +18,7 @@
                 {
                     href: '/miraen/middle-math-pro',
                     title: '수준별 문항 추천 시스템(중학교)',
-                    description: '학생의 성취 수준에 따라 다른 난이도의 문항 추천(IRT 기반)',
+                    description: '성취 수준에 따라 다른 난이도/틀린 개념 문항 추천(IRT 기반)',
                     icon: 'analytics',
                     color: 'blue'
                 },
@@ -53,13 +53,14 @@
                     disabled: true
                 },
                 {
+                    href: '/miraen/middle-math-pro/chat',
                     title: '컨텐츠 및 문제 챗봇',
                     description: '컨텐츠와 문항별로 달라지는 답변을 확인하세요',
                     icon: 'quiz',
-                    disabled: true
+                    color: 'purple'
                 },
                 {
-                    title: '페���소나별 피드백 챗봇',
+                    title: '페르소나별 피드백 챗봇',
                     description: '학습자의 페르소나별로 달라지는 학습팁과 정서지원 답변을 확인하세요',
                     icon: 'person',
                     disabled: true

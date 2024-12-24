@@ -136,7 +136,7 @@
         class="px-4 py-2 rounded-t-lg transition-colors duration-200 {!showFormativeAssessment ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}"
         on:click={handleRegularProblemSelect}
       >
-        수학2 / I. 수와 식 / 1. 유리수와 순환소수
+        문제 목록
       </button>
       <button
         class="px-4 py-2 rounded-t-lg transition-colors duration-200 {showFormativeAssessment ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}"

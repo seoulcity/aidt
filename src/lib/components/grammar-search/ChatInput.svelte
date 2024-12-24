@@ -3,6 +3,7 @@
   export let onSubmit;
   export let isLoading;
   
+  let inputElement;
   let newMessage = '';
 
   function handleSubmit() {
@@ -10,11 +11,20 @@
     onSubmit(newMessage);
     newMessage = '';
   }
+
+  // 외부에서 값을 설정할 수 있도록 export
+  export function setValue(value) {
+    newMessage = value;
+  }
+
+  // bind:this를 통해 컴포넌트 인스턴스를 외부에서 참조할 수 있게 함
+  export { inputElement as this };
 </script>
 
 <div class="border-t border-gray-200 p-4">
   <form on:submit|preventDefault={handleSubmit} class="flex space-x-4">
     <input
+      bind:this={inputElement}
       type="text"
       bind:value={newMessage}
       placeholder="메시지를 입력하세요..."
