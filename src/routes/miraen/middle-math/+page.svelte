@@ -270,7 +270,7 @@
     await renderMath();
   }
 
-  // 풀이 표시 상태를 관리하기 위�� 배열 추가
+  // 풀이 표시 상태를 관리하기 위해 배열 추가
   let showExplanations = mathProblems.map(() => false);
 
   // 풀이 토글 함수 추가

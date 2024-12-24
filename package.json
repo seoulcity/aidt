@@ -30,6 +30,7 @@
 	"type": "module",
 	"dependencies": {
 		"@langchain/core": "^0.3.18",
+		"@material-symbols/font-400": "^0.27.2",
 		"cookie": "^1.0.1",
 		"dotenv": "^16.4.5",
 		"katex": "^0.16.11",

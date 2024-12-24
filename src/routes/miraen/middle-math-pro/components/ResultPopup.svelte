@@ -72,7 +72,7 @@
                   정답: {result.correct}문제
                 </div>
                 <div class="text-red-600">
-                  오답: {result.total - result.correct}��제
+                  오답: {result.total - result.correct}문제
                 </div>
               </div>
             </div>
