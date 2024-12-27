@@ -1,5 +1,5 @@
 <!-- src/routes/miraen/middle-math-pro/chat/+page.svelte -->
-<script lang="ts">
+<script>
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { mathProSupabase } from '$lib/mathProSupabaseClient';
@@ -19,21 +19,24 @@
   let chatInput;
 
   onMount(async () => {
+    console.log('Component mounted');
     const classOrderTitle = $page.url.searchParams.get('class');
-    if (classOrderTitle) {
-      await loadProblems(classOrderTitle);
-    }
+    console.log('Class order title:', classOrderTitle);
+    
+    // Load all problems regardless of class order title
+    await loadProblems();
   });
 
   async function loadProblems(classOrderTitle) {
     try {
+      console.log('Loading problems...');
       const { data, error } = await mathProSupabase
         .from('problems')
-        .select('*')
-        .eq('class_order_title', classOrderTitle)
-        .eq('activity_category', '이해');
+        .select('*');
 
       if (error) throw error;
+      
+      console.log('Loaded problems:', data);
       problems = data;
     } catch (err) {
       console.error('문제 로딩 에러:', err);
