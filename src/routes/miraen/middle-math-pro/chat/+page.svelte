@@ -2,10 +2,17 @@
 <script>
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
+  import { slide } from 'svelte/transition';
   import { mathProSupabase } from '$lib/mathProSupabaseClient';
+  import ChatMessages from '$lib/components/grammar-search/ChatMessages.svelte';
+  import ChatInput from '$lib/components/grammar-search/ChatInput.svelte';
   import { parseXML } from '../utils/xmlParser';
+  import MathChatGuide from '$lib/components/math-chat/MathChatGuide.svelte';
+  import { renderElement } from '../utils/renderElement';
   import 'katex/dist/katex.min.css';
   import BackButton from '$lib/components/common/BackButton.svelte';
+  import LoadingSpinner from '$lib/components/common/LoadingSpinner.svelte';
+  import LoadingDots from '$lib/components/common/LoadingDots.svelte';
   import ProblemList from '$lib/components/math-chat/ProblemList.svelte';
   import ProblemDetail from '$lib/components/math-chat/ProblemDetail.svelte';
   import ChatArea from '$lib/components/math-chat/ChatArea.svelte';
@@ -239,7 +246,7 @@ ${messageText}
       onScroll={handleScroll}
     />
 
-    <!-- 문제 및 채팅 영역 -->
+    <!-- ���제 및 채팅 영역 -->
     <div class="col-span-8 h-[calc(100vh-8rem)] flex flex-col">
       {#if selectedProblem}
         <ProblemDetail
