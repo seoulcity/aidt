@@ -60,7 +60,7 @@
             </p>
           </div>
           
-          {#if message.role === 'assistant' && message.contexts?.length > 0}
+          {#if !isMathChat && message.role === 'assistant' && message.contexts?.length > 0}
             <InfoIcon 
               contexts={message.contexts}
               on:showInfo={handleShowInfo}
