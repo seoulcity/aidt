@@ -183,6 +183,7 @@ ${messageText}
       messages = [...messages, {
         role: 'assistant',
         content: data.content,
+        rawContent: data.content,
         timestamp: new Date(),
         isStreaming: true,
         contexts: [{

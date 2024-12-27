@@ -27,6 +27,10 @@
   function handleShowPrompt(event) {
     dispatch('showPrompt', event.detail);
   }
+
+  function handleShowResponse(event) {
+    dispatch('showPrompt', { prompt: event.detail.prompt });
+  }
 </script>
 
 <div 
@@ -69,6 +73,13 @@
             <PromptInfoIcon
               prompt={message.prompt}
               on:showPrompt={handleShowPrompt}
+            />
+          {/if}
+          
+          {#if message.role === 'assistant' && !message.isError}
+            <PromptInfoIcon
+              prompt={message.content}
+              on:showPrompt={handleShowResponse}
             />
           {/if}
           
