@@ -4,6 +4,27 @@ import katex from 'katex';
 function cleanLatex(latex) {
   if (!latex) return '';
   
+  // 한글 원문자와 특수 문자를 일반 텍스트로 처리
+  const specialChars = {
+    '㉠': '\\text{㉠}',
+    '㉡': '\\text{㉡}',
+    '㉢': '\\text{㉢}',
+    '㉣': '\\text{㉣}',
+    '㉤': '\\text{㉤}',
+    '㈎': '\\text{㈎}',
+    '㈏': '\\text{㈏}',
+    '㈐': '\\text{㈐}',
+    '㈑': '\\text{㈑}',
+    '㈒': '\\text{㈒}',
+    '◻': '\\square',
+    '□': '\\square',
+    '⇨': '\\Rightarrow'
+  };
+  
+  // 특수 문자 변환
+  latex = Object.entries(specialChars).reduce((acc, [char, replacement]) => 
+    acc.replace(new RegExp(char, 'g'), replacement), latex);
+  
   // HTML 엔티티를 실제 기호로 변환
   latex = latex.replace(/&lt;/g, '<');
   latex = latex.replace(/&gt;/g, '>');
