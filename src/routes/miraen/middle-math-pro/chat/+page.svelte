@@ -4,10 +4,10 @@
   import { page } from '$app/stores';
   import { slide } from 'svelte/transition';
   import { mathProSupabase } from '$lib/mathProSupabaseClient';
+  import ChatMessages from '$lib/components/grammar-search/ChatMessages.svelte';
   import ChatInput from '$lib/components/grammar-search/ChatInput.svelte';
   import { parseXML } from '../utils/xmlParser';
   import MathChatGuide from '$lib/components/math-chat/MathChatGuide.svelte';
-  import MathChatMessages from '$lib/components/math-chat/MathChatMessages.svelte';
   import { renderElement } from '../utils/renderElement';
   import 'katex/dist/katex.min.css';
   
@@ -138,12 +138,10 @@ ${parseXML(selectedProblem.problem)
 ${selectedProblem.explanation}
 
 [답변 지침]
-1. 학생의 이해를 돕기 위해 단계적으로 설명��주세요.
+1. 학생의 이해를 돕기 위해 단계적으로 설명해주세요.
 2. 필요한 경우 유사한 예시를 들어 설명해주세요.
 3. 문제의 핵심 개념을 강조해주세요.
 4. 모든 수식은 반드시 KaTeX 문법으로 작성해주세요:
-   - 모든 수식은 반드시 $ 또는 $$ 기호로 감싸서 표현해야 합니다
-   - 단순한 숫자나 변수도 반드시 $2$, $x$ 와 같이 표현해야 합니다
    - 인라인 수식: $수식$ 형태로 작성 (예: $x^2 + 2x + 1$)
    - 디스플레이 수식: $$수식$$ 형태로 작성 (예: $$\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$)
    - 특수 기호: \\times (×), \\div (÷), \\pm (±), \\therefore (∴) 등
@@ -152,10 +150,7 @@ ${selectedProblem.explanation}
    - 루트: \\sqrt{x}, \\sqrt[n]{x}
    - 괄호: (), [], \\{\\}, \\left( \\right)
    - 삼각함수: \\sin x, \\cos x, \\tan x
-   - 각도: $90^\\circ$, $180^\\circ$ 등
-   - 부등호: $\\leq$, $\\geq$, $\\neq$ 등
 5. 학생이 이해하기 쉽도록 친근하고 명확한 용어를 사용해주세요.
-6. 답변에서 수식이나 숫자를 언급할 때는 반드시 KaTeX 문법을 사용해야 합니다.
 
 [현재 질문]
 ${messageText}
@@ -386,10 +381,11 @@ ${messageText}
           
           <div class="flex-1 overflow-y-auto px-4 py-2" bind:this={chatContainer}>
             <div class="max-w-3xl mx-auto">
-              <MathChatMessages
+              <ChatMessages
                 {messages}
                 {chatContainer}
                 {isLoading}
+                isMathChat={true}
                 on:messageComplete={handleMessageComplete}
               />
             </div>

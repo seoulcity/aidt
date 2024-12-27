@@ -3,12 +3,14 @@
   import { createEventDispatcher } from 'svelte';
   import InfoIcon from './InfoIcon.svelte';
   import StreamingText from './StreamingText.svelte';
+  import MathMessage from '$lib/components/math-chat/MathMessage.svelte';
   
   const dispatch = createEventDispatcher();
   
   export let messages = [];
   export let chatContainer;
   export let isLoading = false;
+  export let isMathChat = false;
   
   function handleStreamComplete(text, index) {
     dispatch('messageComplete', {
@@ -48,6 +50,8 @@
                 {chatContainer}
                 onComplete={(text) => handleStreamComplete(text, i)}
               />
+            {:else if isMathChat && message.role === 'assistant' && !message.isError}
+              <MathMessage content={message.content} />
             {:else}
               <p class="whitespace-pre-wrap">{message.content}</p>
             {/if}
