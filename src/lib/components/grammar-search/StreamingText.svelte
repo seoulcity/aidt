@@ -4,7 +4,6 @@
   
   export let text = '';
   export let onComplete = () => {};
-  export let autoScroll = true;
   export let chatContainer = null;
   
   let streamingMessage = '';
@@ -25,12 +24,6 @@
       if (index < text.length) {
         streamingMessage += text[index];
         index++;
-        
-        if (autoScroll && chatContainer) {
-          requestAnimationFrame(() => {
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-          });
-        }
       } else {
         clearInterval(streamingInterval);
         isStreaming = false;

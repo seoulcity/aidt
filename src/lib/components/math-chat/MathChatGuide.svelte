@@ -1,3 +1,4 @@
+<!-- src/lib/components/math-chat/MathChatGuide.svelte -->
 <script>
   export let messages = [];
   export let onExampleClick;

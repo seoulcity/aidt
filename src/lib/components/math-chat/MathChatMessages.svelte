@@ -1,15 +1,15 @@
-<!-- src/lib/components/grammar-search/ChatMessages.svelte -->
 <script>
   import { createEventDispatcher } from 'svelte';
-  import InfoIcon from './InfoIcon.svelte';
-  import StreamingText from './StreamingText.svelte';
+  import InfoIcon from '../grammar-search/InfoIcon.svelte';
+  import StreamingText from '../grammar-search/StreamingText.svelte';
+  import katex from 'katex';
   
   const dispatch = createEventDispatcher();
   
   export let messages = [];
   export let chatContainer;
   export let isLoading = false;
-  
+
   function handleStreamComplete(text, index) {
     dispatch('messageComplete', {
       index,
@@ -20,17 +20,46 @@
   function handleShowInfo(event) {
     dispatch('showInfo', event.detail);
   }
+
+  function renderMathInText(text) {
+    const regex = /\$\$(.*?)\$\$|\$(.*?)\$/g;
+    let lastIndex = 0;
+    const parts = [];
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      // Add text before the math
+      if (match.index > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index));
+      }
+
+      const isDisplayMode = match[1] !== undefined;
+      const formula = isDisplayMode ? match[1] : match[2];
+
+      try {
+        const html = katex.renderToString(formula, {
+          displayMode: isDisplayMode,
+          throwOnError: false
+        });
+        parts.push(html);
+      } catch (error) {
+        console.error('KaTeX 렌더링 에러:', error);
+        parts.push(match[0]);
+      }
+
+      lastIndex = regex.lastIndex;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex));
+    }
+
+    return parts.join('');
+  }
 </script>
 
-<div 
-  bind:this={chatContainer}
-  class="h-[600px] overflow-y-auto p-4 space-y-4
-         [scrollbar-width:thin] [scrollbar-color:rgba(156,163,175,0.5)_transparent]
-         [&::-webkit-scrollbar]:w-[6px]
-         [&::-webkit-scrollbar-track]:bg-transparent
-         [&::-webkit-scrollbar-thumb]:bg-scrollbar
-         [&::-webkit-scrollbar-thumb]:rounded"
->
+<div class="space-y-4">
   {#each messages as message, i}
     <div class="flex {message.role === 'user' ? 'justify-end' : 'justify-start'}">
       <div class="relative max-w-[80%] rounded-lg p-3 {
@@ -49,7 +78,9 @@
                 onComplete={(text) => handleStreamComplete(text, i)}
               />
             {:else}
-              <p class="whitespace-pre-wrap">{message.content}</p>
+              <div class="whitespace-pre-wrap">
+                {@html renderMathInText(message.content)}
+              </div>
             {/if}
             <p class="text-xs mt-2 opacity-70">
               {message.timestamp.toLocaleTimeString()}
