@@ -18,38 +18,45 @@ function cleanLatex(latex) {
     '㈒': '\\text{㈒}',
     '◻': '\\square',
     '□': '\\square',
-    '⇨': '\\Rightarrow'
+    '⇨': '\\Rightarrow',
+    '∴': '\\therefore',
+    '⋯': '\\cdots',
+    '×': '\\times',
+    '÷': '\\div',
+    '±': '\\pm',
   };
   
   // 특수 문자 변환
-  latex = Object.entries(specialChars).reduce((acc, [char, replacement]) => 
-    acc.replace(new RegExp(char, 'g'), replacement), latex);
+  let result = latex;
+  for (const [char, replacement] of Object.entries(specialChars)) {
+    result = result.replace(new RegExp(char, 'g'), replacement);
+  }
   
   // HTML 엔티티를 실제 기호로 변환
-  latex = latex.replace(/&lt;/g, '<');
-  latex = latex.replace(/&gt;/g, '>');
-  latex = latex.replace(/&amp;/g, '&');
+  result = result.replace(/&lt;/g, '<');
+  result = result.replace(/&gt;/g, '>');
+  result = result.replace(/&amp;/g, '&');
   
   // therefore 기호 처리
-  latex = latex.replace(/∴\\mathit{/g, '\\therefore\\;\\mathit{');
-  latex = latex.replace(/∴(\w)/g, '\\therefore\\;{$1}');
-  latex = latex.replace(/∴/g, '\\therefore');
+  result = result.replace(/∴\\mathit{/g, '\\therefore\\;\\mathit{');
+  result = result.replace(/∴(\w)/g, '\\therefore\\;{$1}');
+  result = result.replace(/∴/g, '\\therefore');
   
   // \bbox 명령어 처리
-  latex = latex.replace(/\\bbox\[([^\]]*)\]{([^{}]*|{[^{}]*})*}/g, '$2');
+  result = result.replace(/\\bbox\[([^\]]*)\]{([^{}]*|{[^{}]*})*}/g, '$2');
   
   // 수식 기호 및 공백 처리
-  latex = latex.replace(/×/g, '\\times');
-  latex = latex.replace(/\\mathrm{([^}]*)}/g, (match, p1) => 
+  result = result.replace(/×/g, '\\times');
+  result = result.replace(/\\mathrm{([^}]*)}/g, (match, p1) => 
     `\\mathrm{${p1.replace(/\s+/g, '')}}`
   );
-  latex = latex.replace(/ﾠ/g, '\\;');
-  latex = latex.replace(/\\,\s*\\,/g, '\\,');
-  latex = latex.replace(/\s*,\s*/g, ',\\,');
-  latex = latex.replace(/\\times\s*([A-Za-z])/g, '\\times $1');
-  latex = latex.replace(/([<>])/g, ' $1 ');
+  result = result.replace(/ﾠ/g, '\\;');
+  result = result.replace(/\\,\s*\\,/g, '\\,');
+  result = result.replace(/\s*,\s*/g, ',\\,');
+  result = result.replace(/\\times\s*([A-Za-z])/g, '\\times $1');
+  result = result.replace(/([<>])/g, ' $1 ');
   
-  return latex;
+  return result;
 }
 
 export function renderElement(element) {
