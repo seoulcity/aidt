@@ -2,21 +2,15 @@
 <script>
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
-  import { slide } from 'svelte/transition';
   import { mathProSupabase } from '$lib/mathProSupabaseClient';
-  import ChatMessages from '$lib/components/grammar-search/ChatMessages.svelte';
-  import ChatInput from '$lib/components/grammar-search/ChatInput.svelte';
   import { parseXML } from '../utils/xmlParser';
-  import MathChatGuide from '$lib/components/math-chat/MathChatGuide.svelte';
-  import { renderElement } from '../utils/renderElement';
   import 'katex/dist/katex.min.css';
   import BackButton from '$lib/components/common/BackButton.svelte';
-  import LoadingSpinner from '$lib/components/common/LoadingSpinner.svelte';
-  import LoadingDots from '$lib/components/common/LoadingDots.svelte';
   import ProblemList from '$lib/components/math-chat/ProblemList.svelte';
   import ProblemDetail from '$lib/components/math-chat/ProblemDetail.svelte';
   import ChatArea from '$lib/components/math-chat/ChatArea.svelte';
   import EmptyState from '$lib/components/math-chat/EmptyState.svelte';
+  import PromptModal from '$lib/components/math-chat/PromptModal.svelte';
   
   let messages = [];
   let chatContainer;
@@ -33,6 +27,8 @@
   let visibleProblems = [];
   let isLoadingMore = false;
   let hasMoreProblems = true;
+  let isPromptModalOpen = false;
+  let currentPrompt = '';
 
   onMount(async () => {
     console.log('Component mounted');
@@ -117,18 +113,7 @@
   async function handleSubmit(messageText) {
     if (!messageText.trim() || !selectedProblem) return;
 
-    const userMessage = {
-      role: 'user',
-      content: messageText,
-      timestamp: new Date()
-    };
-
-    messages = [...messages, userMessage];
-    isLoading = true;
-
-    try {
-      // 문제와 해설을 더 구조화된 형태로 컨텍스트에 포함
-      const systemPrompt = `
+    const systemPrompt = `
 당신은 수학 문제를 설명하는 선생님입니다. 다음 문제와 해설을 참고하여 학생의 질문에 답변해주세요:
 
 [문제 정보]
@@ -136,10 +121,10 @@
 - 활동 유형: ${selectedProblem.activity_category}
 
 [문제 내용]
-${parseXML(selectedProblem.problem)
-  .filter(el => el.type !== 'input')
-  .map(el => el.text || '')
-  .join('\n')}
+${selectedProblem.problem}
+
+[정답]
+${selectedProblem.correct_answer}
 
 [문제 해설]
 ${selectedProblem.explanation}
@@ -167,6 +152,17 @@ ${selectedProblem.explanation}
 ${messageText}
 `;
 
+    const userMessage = {
+      role: 'user',
+      content: messageText,
+      timestamp: new Date(),
+      prompt: systemPrompt
+    };
+
+    messages = [...messages, userMessage];
+    isLoading = true;
+
+    try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -228,6 +224,15 @@ ${messageText}
       chatInput.setValue(question);
     }
   }
+
+  function handleShowPrompt(event) {
+    currentPrompt = event.detail.prompt;
+    isPromptModalOpen = true;
+  }
+
+  function handleClosePromptModal() {
+    isPromptModalOpen = false;
+  }
 </script>
 
 <div class="container mx-auto px-4 py-8 max-w-7xl">
@@ -250,7 +255,7 @@ ${messageText}
       onScroll={handleScroll}
     />
 
-    <!-- ���제 및 채팅 영역 -->
+    <!-- 제 및 채팅 영역 -->
     <div class="col-span-8 h-[calc(100vh-8rem)] flex flex-col">
       {#if selectedProblem}
         <ProblemDetail
@@ -267,6 +272,7 @@ ${messageText}
           onExampleClick={handleExampleClick}
           onSubmit={handleSubmit}
           onMessageComplete={handleMessageComplete}
+          onShowPrompt={handleShowPrompt}
         />
       {:else}
         <EmptyState />
@@ -274,6 +280,12 @@ ${messageText}
     </div>
   </div>
 </div> 
+
+<PromptModal 
+  isOpen={isPromptModalOpen}
+  prompt={currentPrompt}
+  onClose={handleClosePromptModal}
+/>
 
 <style>
   :global(.bbox-highlight) {

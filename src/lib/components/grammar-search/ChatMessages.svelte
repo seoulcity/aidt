@@ -4,6 +4,7 @@
   import InfoIcon from './InfoIcon.svelte';
   import StreamingText from './StreamingText.svelte';
   import MathMessage from '$lib/components/math-chat/MathMessage.svelte';
+  import PromptInfoIcon from '$lib/components/math-chat/PromptInfoIcon.svelte';
   
   const dispatch = createEventDispatcher();
   
@@ -21,6 +22,10 @@
 
   function handleShowInfo(event) {
     dispatch('showInfo', event.detail);
+  }
+
+  function handleShowPrompt(event) {
+    dispatch('showPrompt', event.detail);
   }
 </script>
 
@@ -59,6 +64,13 @@
               {message.timestamp.toLocaleTimeString()}
             </p>
           </div>
+          
+          {#if message.role === 'user' && message.prompt}
+            <PromptInfoIcon
+              prompt={message.prompt}
+              on:showPrompt={handleShowPrompt}
+            />
+          {/if}
           
           {#if !isMathChat && message.role === 'assistant' && message.contexts?.length > 0}
             <InfoIcon 

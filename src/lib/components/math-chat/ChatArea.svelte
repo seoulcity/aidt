@@ -13,6 +13,7 @@
   export let onMessageComplete: (event: CustomEvent) => void;
   export let chatInput: any;
   export let suggestions: string[] = [];
+  export let onShowPrompt: (event: CustomEvent) => void;
 
   $: if (messages.length === 0) {
     suggestions = [
@@ -41,6 +42,7 @@
         {isLoading}
         isMathChat={true}
         on:messageComplete={onMessageComplete}
+        on:showPrompt={onShowPrompt}
       />
     </div>
   </div>
