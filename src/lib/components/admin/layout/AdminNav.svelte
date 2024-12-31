@@ -17,7 +17,7 @@
             <div class="flex">
                 <div class="flex-shrink-0 flex items-center">
                     <a href="/admin" class="text-xl font-bold text-gray-800">
-                        클라시스 관리자 {#if currentSubject}- {currentSubject}{/if}
+                        AI다움 관리자 {#if currentSubject}- {currentSubject}{/if}
                     </a>
                 </div>
                 <div class="hidden sm:ml-6 sm:flex sm:space-x-8">

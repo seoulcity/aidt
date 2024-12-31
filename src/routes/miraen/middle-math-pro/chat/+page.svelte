@@ -3,7 +3,6 @@
   import { onMount } from 'svelte';
   import { page } from '$app/stores';
   import { mathProSupabase } from '$lib/mathProSupabaseClient';
-  import { parseXML } from '../utils/xmlParser';
   import 'katex/dist/katex.min.css';
   import BackButton from '$lib/components/common/BackButton.svelte';
   import ProblemList from '$lib/components/math-chat/ProblemList.svelte';

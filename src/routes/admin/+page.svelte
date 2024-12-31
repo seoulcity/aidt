@@ -28,7 +28,7 @@
 </script>
 
 <div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold text-center mb-12">클라시스 관리자</h1>
+    <h1 class="text-3xl font-bold text-center mb-12">AI다움 관리자</h1>
     
     <div class="max-w-4xl mx-auto grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {#each subjects as subject}

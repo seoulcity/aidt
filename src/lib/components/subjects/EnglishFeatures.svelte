@@ -24,7 +24,7 @@
                 },
                 {
                     href: '/miraen/grammar-search',
-                    title: '영문법 검색',
+                    title: '영문법 검색형 챗봇',
                     description: '영문법을 쉽게 검색해보세요',
                     icon: 'search',
                     color: 'purple'

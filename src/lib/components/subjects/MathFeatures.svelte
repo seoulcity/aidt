@@ -33,12 +33,6 @@
                     description: '수식이 포함된 손글씨 풀이에 피드백과 힌트를 제공합니다',
                     icon: 'draw',
                     disabled: true
-                },
-                {
-                    title: '초등 수학',
-                    description: '초등수학 학습 현황을 확인해보세요',
-                    icon: 'dashboard',
-                    disabled: true
                 }
             ]
         },
@@ -47,10 +41,11 @@
             icon: 'smart_toy',
             features: [
                 {
+                    href: '/miraen/middle-math-pro/adaptive-chat',
                     title: '맞춤형 답변 챗봇',
                     description: '컨텐츠 관련, 학습팁/정서관리, 금칙어 설정 등에 따라 답변을 분석하여 알맞은 답변을 제공합니다',
                     icon: 'chat',
-                    disabled: true
+                    color: 'green'
                 },
                 {
                     href: '/miraen/middle-math-pro/chat',

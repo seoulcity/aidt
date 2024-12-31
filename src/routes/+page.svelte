@@ -44,10 +44,10 @@
 	<header class="mb-8 text-center">
 		<img src="/og_img.png" alt="미래엔 로고" class="mx-auto mb-4 max-w-md" />
 		<div class="flex items-center justify-center gap-2 mb-2">
-			<h1 class="text-xl font-semibold text-gray-800">클라시스</h1>
-			<span class="px-2 py-0.5 text-xs bg-blue-50 text-blue-500 rounded-full">beta</span>
+			<h1 class="text-xl font-semibold text-gray-800">AI다움</h1>
+			<span class="px-2 py-0.5 text-xs bg-blue-50 text-blue-500 rounded-full">βeta</span>
 		</div>
-		<p class="text-gray-600">AI 디지털 교과서 통합 시스템</p>
+		<p class="text-gray-600">AI 디지털교과서 솔루션</p>
 	</header>
 
 	<TabNavigation {tabs} {activeTab} onTabChange={switchTab} />
