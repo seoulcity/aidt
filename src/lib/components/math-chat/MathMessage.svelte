@@ -1,3 +1,4 @@
+<!-- src/lib/components/math-chat/MathMessage.svelte -->
 <script>
   import katex from 'katex';
   
