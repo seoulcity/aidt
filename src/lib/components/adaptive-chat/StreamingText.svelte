@@ -5,6 +5,7 @@
   export let text: string = '';
   export let onComplete: (text: string) => void;
   export let chatContainer: HTMLElement | null = null;
+  export let autoScroll = true;
   
   let streamingMessage = '';
   let streamingInterval: number | undefined;
@@ -25,7 +26,7 @@
         streamingMessage += text[index];
         index++;
         
-        if (chatContainer) {
+        if (chatContainer && autoScroll) {
           chatContainer.scrollTop = chatContainer.scrollHeight;
         }
       } else {

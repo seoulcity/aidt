@@ -6,6 +6,7 @@
   import ChatGuide from '$lib/components/adaptive-chat/ChatGuide.svelte';
   import MessageClassificationGuide from '$lib/components/adaptive-chat/MessageClassificationGuide.svelte';
   import ForbiddenManagement from '$lib/components/adaptive-chat/ForbiddenManagement.svelte';
+  import ForbiddenInfoModal from '$lib/components/adaptive-chat/ForbiddenInfoModal.svelte';
   import { AdaptiveChatService } from '$lib/services/adaptiveChatService';
   import type { ChatMessage, ScrollEvent, MessageCompleteEvent } from '$lib/types/chat';
   
@@ -16,6 +17,9 @@
   let autoScroll = true;
   let showManagement = false;
   let messageClassificationGuide: MessageClassificationGuide;
+  let showForbiddenModal = false;
+  let currentAnalysisInfo: { type: 'harmful' | 'violent' | 'distraction' | 'hate' | 'normal'; reason: string; helpline: string[]; }[] | null = null;
+  let currentForbiddenInfo: { category: string; keyword: string; } | null = null;
 
   onMount(() => {
     chatService = new AdaptiveChatService();
@@ -27,10 +31,16 @@
     }
   }
 
-  function handleScroll(event: ScrollEvent) {
+  function handleScroll(event: CustomEvent) {
     if (!chatContainer) return;
     
-    const { scrollTop, scrollHeight, clientHeight } = event.target;
+    const target = event.target as HTMLElement & { 
+      scrollTop: number;
+      scrollHeight: number;
+      clientHeight: number;
+    };
+    
+    const { scrollTop, scrollHeight, clientHeight } = target;
     const isAtBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 10;
     
     autoScroll = isAtBottom;
@@ -42,10 +52,42 @@
     messages = chatService.getMessages();
   }
 
+  function handleShowInfo(event: CustomEvent<{ contexts: Array<{ category: string; keyword: string; details?: string[]; }> }>) {
+    const { contexts } = event.detail;
+    if (contexts && contexts.length > 0) {
+      const context = contexts[0];
+      if (context.category.includes('감지')) {
+        currentAnalysisInfo = contexts.map(ctx => ({
+          type: ctx.category.includes('자살/자해') ? 'harmful' :
+                ctx.category.includes('반사회적') ? 'violent' :
+                ctx.category.includes('학습 방해') ? 'distraction' :
+                ctx.category.includes('혐오') ? 'hate' : 'normal',
+          reason: ctx.keyword,
+          helpline: ctx.details || []
+        }));
+        currentForbiddenInfo = null;
+      } else {
+        currentForbiddenInfo = {
+          category: context.category,
+          keyword: context.keyword
+        };
+        currentAnalysisInfo = null;
+      }
+      showForbiddenModal = true;
+    }
+  }
+
+  function handleCloseModal() {
+    showForbiddenModal = false;
+    currentForbiddenInfo = null;
+    currentAnalysisInfo = null;
+  }
+
   async function handleSubmit(messageText: string) {
     if (!messageText.trim()) return;
 
     const userMessage: ChatMessage = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       role: 'user',
       content: messageText,
       timestamp: new Date()
@@ -99,6 +141,7 @@
             {autoScroll}
             on:scroll={handleScroll}
             on:messageComplete={handleMessageComplete}
+            on:showInfo={handleShowInfo}
           />
         </div>
 
@@ -116,4 +159,11 @@
       on:update={handleForbiddenUpdate}
     />
   {/if}
-</div> 
+</div>
+
+<ForbiddenInfoModal
+  showModal={showForbiddenModal}
+  forbiddenInfo={currentForbiddenInfo}
+  analysisInfo={currentAnalysisInfo}
+  on:close={handleCloseModal}
+/> 

@@ -84,6 +84,51 @@
               </div>
             {/each}
           </div>
+
+          <div class="mt-6">
+            <h4 class="font-medium mb-3">메시지 감지 기준</h4>
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div class="bg-white p-3 rounded border border-gray-200">
+                <div class="font-medium text-gray-800 mb-1">자살/자해 감지</div>
+                <p class="text-sm text-gray-600 mb-2">자살, 자해 관련 표현이나 위험 신호를 감지합니다.</p>
+                <div class="text-sm text-gray-500">
+                  <div>• 자살, 죽음 관련 직접적 언급</div>
+                  <div>• 극단적 절망감 표현</div>
+                  <div>• 자해 충동이나 시도 언급</div>
+                </div>
+              </div>
+
+              <div class="bg-white p-3 rounded border border-gray-200">
+                <div class="font-medium text-gray-800 mb-1">반사회적/폭력적 내용 감지</div>
+                <p class="text-sm text-gray-600 mb-2">폭력, 위협, 반사회적 행동을 감지합니다.</p>
+                <div class="text-sm text-gray-500">
+                  <div>• 물리적 폭력 표현</div>
+                  <div>• 위협이나 협박</div>
+                  <div>• 불법 행위 언급</div>
+                </div>
+              </div>
+
+              <div class="bg-white p-3 rounded border border-gray-200">
+                <div class="font-medium text-gray-800 mb-1">학습 방해 요소 감지</div>
+                <p class="text-sm text-gray-600 mb-2">학습에 방해되는 요소나 태도를 감지합니다.</p>
+                <div class="text-sm text-gray-500">
+                  <div>• 게임, 오락 관련 내용</div>
+                  <div>• 학습 회피 표현</div>
+                  <div>• 집중력 저하 요인</div>
+                </div>
+              </div>
+
+              <div class="bg-white p-3 rounded border border-gray-200">
+                <div class="font-medium text-gray-800 mb-1">혐오 표현 감지</div>
+                <p class="text-sm text-gray-600 mb-2">차별적이거나 혐오성 표현을 감지합니다.</p>
+                <div class="text-sm text-gray-500">
+                  <div>• 차별적 발언</div>
+                  <div>• 비하 표현</div>
+                  <div>• 모욕적 언어</div>
+                </div>
+              </div>
+            </div>
+          </div>
         {/if}
       </div>
     </div>

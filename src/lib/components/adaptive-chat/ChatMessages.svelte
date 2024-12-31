@@ -6,6 +6,7 @@
   import { marked } from 'marked';
   import DOMPurify from 'dompurify';
   import type { ChatMessage } from '$lib/types/chat';
+  import InfoIcon from '../grammar-search/InfoIcon.svelte';
   
   const dispatch = createEventDispatcher();
   
@@ -14,11 +15,46 @@
   export let isLoading = false;
   export let autoScroll = true;
   
+  let messageToExplode: number | null = null;
+
   function handleStreamComplete(text: string, index: number) {
     dispatch('messageComplete', {
       index,
       text
     });
+  }
+
+  function handleShowInfo(event: CustomEvent) {
+    dispatch('showInfo', event.detail);
+  }
+
+  function handleForbiddenMessage(index: number) {
+    if (messages[index]?.forbiddenInfo) {
+      setTimeout(() => {
+        messageToExplode = index;
+      }, 3000);
+    }
+  }
+
+  $: {
+    if (messages.length > 0) {
+      const lastIndex = messages.length - 1;
+      const lastMessage = messages[lastIndex];
+      if (lastMessage.forbiddenInfo && !lastMessage.isDeleted) {
+        handleForbiddenMessage(lastIndex - 1);
+      }
+      if (autoScroll && chatContainer) {
+        setTimeout(() => {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }, 0);
+      }
+    }
+  }
+
+  function handleScroll(event: CustomEvent<{ target: HTMLElement }>) {
+    const target = event.detail.target;
+    const isAtBottom = Math.abs(target.scrollHeight - target.clientHeight - target.scrollTop) < 10;
+    autoScroll = isAtBottom;
   }
 
   function getMessageStyle(message: ChatMessage) {
@@ -62,7 +98,10 @@
 >
   {#each messages as message, i}
     {@const style = getMessageStyle(message)}
-    <div class="flex {message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in">
+    <div 
+      class="flex {message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in
+             {messageToExplode === i ? 'animate-explode' : ''}"
+    >
       <div class="relative max-w-[80%] rounded-lg p-3 {style.backgroundColor} {style.textColor}">
         <div class="flex items-start">
           {#if message.role === 'assistant' && !message.isError && style.icon}
@@ -73,16 +112,43 @@
               <StreamingText
                 text={message.content}
                 {chatContainer}
+                {autoScroll}
                 onComplete={(text) => handleStreamComplete(text, i)}
               />
             {:else}
-              {#if message.role === 'assistant'}
-                <div class="whitespace-pre-wrap prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-headings:my-2" 
-                     style="color: inherit;"
-                     >{@html renderMarkdown(message.content)}</div>
-              {:else}
-                <p class="whitespace-pre-wrap">{message.content}</p>
-              {/if}
+              <div class="flex items-start">
+                {#if message.role === 'assistant'}
+                  <div class="whitespace-pre-wrap prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-headings:my-2" 
+                       style="color: inherit;"
+                       >{@html renderMarkdown(message.content)}</div>
+                {:else}
+                  <div class="flex items-start gap-2">
+                    <p class="whitespace-pre-wrap">{message.content}</p>
+                    {#if message.analysisInfo}
+                      <InfoIcon
+                        contexts={message.analysisInfo.reasons.map(reason => ({
+                          category: reason.type === 'harmful' ? '자살/자해 감지' : 
+                                   reason.type === 'violent' ? '반사회적/폭력적 내용 감지' :
+                                   reason.type === 'distraction' ? '학습 방해 요소 감지' :
+                                   reason.type === 'hate' ? '혐오 표현 감지' : '',
+                          keyword: reason.reason,
+                          details: reason.helpline || reason.suggestions
+                        }))}
+                        on:showInfo={handleShowInfo}
+                      />
+                    {/if}
+                  </div>
+                {/if}
+                {#if message.forbiddenInfo}
+                  <InfoIcon
+                    contexts={[{
+                      category: message.forbiddenInfo.category,
+                      keyword: message.forbiddenInfo.keyword
+                    }]}
+                    on:showInfo={handleShowInfo}
+                  />
+                {/if}
+              </div>
             {/if}
             <p class="text-xs mt-2 opacity-70">
               {message.timestamp.toLocaleTimeString()}
@@ -114,6 +180,10 @@
     animation: fadeIn 0.3s ease-in-out;
   }
 
+  .animate-explode {
+    animation: explode 0.5s ease-out forwards;
+  }
+
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -122,6 +192,20 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes explode {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.2);
+    }
+    100% {
+      transform: scale(0);
+      opacity: 0;
     }
   }
 

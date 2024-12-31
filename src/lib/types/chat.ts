@@ -1,12 +1,42 @@
 // src/lib/types/chat.ts
 export interface ChatMessage {
+  id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
+  type?: 'normal' | 'forbidden' | 'harmful' | 'distraction' | 'hate';
   isStreaming?: boolean;
   isError?: boolean;
+  isDeleted?: boolean;
   prompt?: string;
   rawContent?: string;
+  relatedMessageId?: string;
+  forbiddenInfo?: {
+    category: string;
+    keyword: string;
+  };
+  analysisInfo?: {
+    isHarmful?: boolean;
+    isViolent?: boolean;
+    isDistraction?: boolean;
+    isHate?: boolean;
+    reasons: {
+      type: 'harmful' | 'violent' | 'distraction' | 'hate';
+      reason: string;
+      helpline?: string[];
+      suggestions?: string[];
+      details?: {
+        category: string;
+        examples: string[];
+      };
+    }[];
+    analysisDetails?: {
+      distractionScore?: number;
+      hateScore?: number;
+      detectedKeywords?: string[];
+      categories?: string[];
+    };
+  };
 }
 
 export interface ScrollEvent extends Event {

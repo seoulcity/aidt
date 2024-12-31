@@ -59,12 +59,6 @@
                     description: '학습자의 페르소나별로 달라지는 학습팁과 정서지원 답변을 확인하세요',
                     icon: 'person',
                     disabled: true
-                },
-                {
-                    title: '챗봇 답변 관리',
-                    description: '학습과 무관하거나 비윤리적인 답변, 금칙어 설정을 직접 관리해보세요',
-                    icon: 'settings',
-                    disabled: true
                 }
             ]
         },
