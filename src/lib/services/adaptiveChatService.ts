@@ -258,33 +258,17 @@ export class AdaptiveChatService implements ChatService {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          systemPrompt: `당신은 학습에 방해되는 요소를 감지하는 분석가입니다.
-          다음과 같은 내용이 있는지 자세히 분석하세요:
+          systemPrompt: `당신은 메시지가 학습에 방해되는 요소를 포함하고 있는지 판단하는 분석가입니다.
+          다음과 같은 내용이 있는지 분석하세요:
+          - 게임, 오락 관련 내용
+          - 학습 회피/거부 표현
+          - 집중력 저하 요인
           
-          1. 게임 관련:
-          - 온라인/모바일 게임 언급
-          - PC방, 오락실 등 게임 장소 언급
-          - 게임 캐릭터, 아이템, 레벨 등 관련 용어
+          메시지를 분석하고 학습 방해 요소가 있으면 1, 없으면 0으로만 답변하세요.
           
-          2. 오락/여가 활동:
-          - TV, 영화, 드라마 시청
-          - SNS, 유튜브 등 소셜 미디어
-          - 놀이, 노는 것에 대한 언급
+          메시지: ${messageText}
           
-          3. 학습 회피:
-          - 공부 거부/회피 표현
-          - 다른 활동으로 전환 시도
-          - 집중력 저하 요인 언급
-          
-          메시지를 분석하고 다음 JSON 형식으로 답변하세요:
-          {
-            "isDistraction": 1 또는 0,
-            "score": 0~1 사이의 점수,
-            "keywords": [감지된 키워드들],
-            "categories": [해당되는 카테고리들]
-          }
-          
-          메시지: ${messageText}`,
+          답변:`,
           userMessage: messageText
         })
       }).then(res => res.json()),
@@ -296,28 +280,17 @@ export class AdaptiveChatService implements ChatService {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          systemPrompt: `당신은 혐오 표현을 감지하는 분석가입니다.
+          systemPrompt: `당신은 메시지가 혐오 표현이나 차별적 내용을 포함하고 있는지 판단하는 분석가입니다.
           다음과 같은 혐오 표현이 있는지 분석하세요:
-          
-          1. 차별적 표현:
           - 성별, 나이, 인종, 출신 등에 대한 차별
           - 외모, 장애, 질병 등에 대한 비하
-          - 특정 집단에 대한 편견
+          - 특정 집단에 대한 편견이나 모욕
           
-          2. 모욕적 표현:
-          - 비하/멸시하는 표현
-          - 모욕적인 별칭/비유
-          - 인격 모독
+          메시지를 분석하고 혐오 표현이 있으면 1, 없으면 0으로만 답변하세요.
           
-          메시지를 분석하고 다음 JSON 형식으로 답변하세요:
-          {
-            "isHate": 1 또는 0,
-            "score": 0~1 사이의 점수,
-            "category": "감지된 혐오 표현 카테고리",
-            "examples": ["감지된 구체적인 표현들"]
-          }
+          메시지: ${messageText}
           
-          메시지: ${messageText}`,
+          답변:`,
           userMessage: messageText
         })
       }).then(res => res.json())
