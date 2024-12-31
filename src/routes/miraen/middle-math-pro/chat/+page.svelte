@@ -197,6 +197,7 @@ ${messageText}
       messages = [...messages, {
         role: 'system',
         content: '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+        rawContent: '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
         timestamp: new Date(),
         isError: true
       }];
@@ -212,6 +213,7 @@ ${messageText}
         return {
           ...msg,
           content: text,
+          rawContent: msg.rawContent || text,
           isStreaming: false
         };
       }

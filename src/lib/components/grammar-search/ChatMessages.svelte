@@ -78,7 +78,7 @@
           
           {#if message.role === 'assistant' && !message.isError}
             <PromptInfoIcon
-              prompt={message.content}
+              prompt={message.rawContent || message.content}
               on:showPrompt={handleShowResponse}
             />
           {/if}
