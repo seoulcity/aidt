@@ -55,10 +55,11 @@
                     color: 'purple'
                 },
                 {
+                    href: '/miraen/middle-math-pro/persona-chat',
                     title: '페르소나별 피드백 챗봇',
                     description: '학습자의 페르소나별로 달라지는 학습팁과 정서지원 답변을 확인하세요',
                     icon: 'person',
-                    disabled: true
+                    color: 'purple'
                 }
             ]
         },
