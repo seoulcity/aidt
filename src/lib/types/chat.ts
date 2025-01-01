@@ -4,7 +4,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
-  type?: 'normal' | 'forbidden' | 'harmful' | 'distraction' | 'hate';
+  type?: 'normal' | 'forbidden' | 'harmful' | 'distraction' | 'hate' | 'learning_strategy' | 'motivation' | 'learning_distraction';
   isStreaming?: boolean;
   isError?: boolean;
   isDeleted?: boolean;

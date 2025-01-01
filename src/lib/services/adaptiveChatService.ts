@@ -2,9 +2,10 @@
 import type { ChatMessage, ChatService } from '$lib/types/chat';
 import { forbiddenService } from './forbiddenService';
 import type { ForbiddenCategoryWithDetails } from '$lib/types/forbidden';
+import { EmbeddingService } from './embeddingService';
 
 interface MessageAnalysis {
-  type: 'normal' | 'forbidden' | 'harmful' | 'distraction' | 'hate';
+  type: 'normal' | 'forbidden' | 'harmful' | 'distraction' | 'hate' | 'learning_strategy' | 'motivation' | 'learning_distraction';
   category?: string;
   reason?: string;
   isHarmful?: boolean;
@@ -15,6 +16,16 @@ interface MessageAnalysis {
     category: string;
     keyword: string;
   };
+  reasons?: {
+    type: 'harmful' | 'violent' | 'distraction' | 'hate';
+    reason: string;
+    helpline?: string[];
+    suggestions?: string[];
+    details?: {
+      category: string;
+      examples: string[];
+    };
+  }[];
   analysisDetails?: {
     distractionScore?: number;
     hateScore?: number;
@@ -60,13 +71,14 @@ export class AdaptiveChatService implements ChatService {
   }
 
   async sendMessage(messageText: string) {
-    if (!messageText.trim()) return { success: false };
+    console.log('=== sendMessage 시작 ===');
+    console.log('입력된 메시지:', messageText);
 
-    // 이전 메시지가 처리 중인지 확인
+    if (!messageText.trim()) return { success: false };
     if (this.isLoading) return { success: false };
 
-    // 새로운 메시지 ID 생성 (타임스탬프 + 랜덤값)
     const messageId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    console.log('생성된 메시지 ID:', messageId);
 
     // 메시지가 이미 있는지 확인
     const lastMessage = this._messages[this._messages.length - 1];
@@ -78,19 +90,22 @@ export class AdaptiveChatService implements ChatService {
         timestamp: new Date(),
         type: 'normal'
       };
+      console.log('새 사용자 메시지 생성:', userMessage);
       this._messages = [...this._messages, userMessage];
     }
 
     this.isLoading = true;
 
     try {
-      // 메시지 분석
+      console.log('메시지 분석 시작...');
       const analysis = await this.analyzeMessage(messageText);
+      console.log('메시지 분석 결과:', analysis);
 
-      // 분석 결과에 따른 시스템 프롬프트 선택
       const systemPrompt = this.selectSystemPrompt(analysis);
+      console.log('선택된 시스템 프롬프트:', systemPrompt);
       
       if (analysis.type === 'forbidden') {
+        console.log('금칙어 감지됨');
         // 마지막 사용자 메시지에 금칙어 정보 추가
         const userMessageIndex = this._messages.length - 1;
         this._messages[userMessageIndex] = {
@@ -134,6 +149,7 @@ export class AdaptiveChatService implements ChatService {
       // 마지막 사용자 메시지의 분석 결과 업데이트
       const lastUserMessageIndex = this._messages.length - 1;
       if (analysis.type === 'harmful') {
+        console.log('유해 콘텐츠 감지됨');
         this._messages[lastUserMessageIndex] = {
           ...this._messages[lastUserMessageIndex],
           type: 'harmful',
@@ -145,6 +161,7 @@ export class AdaptiveChatService implements ChatService {
         };
       }
 
+      console.log('API 요청 시작...');
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -157,6 +174,8 @@ export class AdaptiveChatService implements ChatService {
       });
 
       const result = await response.json();
+      console.log('API 응답 결과:', result);
+
       if (!response.ok) throw new Error(result.error);
 
       const assistantMessage: ChatMessage = {
@@ -168,6 +187,7 @@ export class AdaptiveChatService implements ChatService {
         type: analysis.type,
         relatedMessageId: messageId
       };
+      console.log('생성된 어시스턴트 메시지:', assistantMessage);
 
       this._messages = [...this._messages, assistantMessage];
       return { success: true };
@@ -189,20 +209,49 @@ export class AdaptiveChatService implements ChatService {
     }
   }
 
-  private async analyzeMessage(messageText: string): Promise<MessageAnalysis & {
-    isHarmful?: boolean;
-    isViolent?: boolean;
-    reasons?: {
-      type: 'harmful' | 'violent' | 'distraction' | 'hate';
-      reason: string;
-      helpline?: string[];
-    }[];
-  }> {
+  private async analyzeMessage(messageText: string): Promise<MessageAnalysis> {
+    console.log('=== analyzeMessage 시작 ===');
+    // 초기 분석 결과를 'normal'로 설정
+    let analysis: MessageAnalysis = {
+      type: 'normal'
+    };
+    console.log('초기 분석 상태:', analysis);
+
+    // 임베딩 유사도 계산을 먼저 수행
+    try {
+      console.log('임베딩 유사도 계산 시작...');
+      const embeddingResult = await EmbeddingService.calculateSimilarities(messageText);
+      console.log('임베딩 분석 결과:', embeddingResult);
+      
+      // 최고 유사도 값 확인 (상위 5개 중 첫 번째)
+      const maxSimilarity = embeddingResult.similarities[0]?.similarity || 0;
+      console.log('최고 유사도:', maxSimilarity);
+
+      // 유사도가 0.6(60%) 이상인 경우에만 카테고리 설정
+      if (maxSimilarity >= 0.6) {
+        if (embeddingResult.category === '학습 방법/전략') {
+          analysis.type = 'learning_strategy';
+          console.log('카테고리가 학습 방법/전략으로 설정됨');
+        } else if (embeddingResult.category === '동기부여/정서') {
+          analysis.type = 'motivation';
+          console.log('카테고리가 동기부여/정서로 설정됨');
+        } else if (embeddingResult.category === '학습 방해 활동') {
+          analysis.type = 'learning_distraction';
+          console.log('카테고리가 학습 방해 활동으로 설정됨');
+        }
+      } else {
+        console.log('유사도가 60% 미만이므로 일반 타입으로 유지');
+      }
+      console.log('임베딩 분석 후 상태:', analysis);
+    } catch (error) {
+      console.error('임베딩 유사도 계산 중 오류:', error);
+    }
+
     // 금칙어 검사
     for (const category of this.forbiddenCategories) {
       for (const keyword of category.keywords) {
         if (messageText.toLowerCase().includes(keyword.keyword.toLowerCase())) {
-          return {
+          analysis = {
             type: 'forbidden',
             category: category.name,
             reason: `${category.name} 카테고리의 금칙어 "${keyword.keyword}" 포함`,
@@ -211,11 +260,12 @@ export class AdaptiveChatService implements ChatService {
               keyword: keyword.keyword
             }
           };
+          return analysis;
         }
       }
     }
 
-    // 병렬로 모든 내용 검사 수행
+    // 유해성 검사 수행
     const [harmfulAnalysis, violentAnalysis, distractionAnalysis, hateAnalysis] = await Promise.all([
       // 자살/자해 내용 검사
       fetch('/api/chat', {
@@ -375,8 +425,18 @@ export class AdaptiveChatService implements ChatService {
         });
       }
 
-      return {
-        type: isHarmful || isViolent ? 'harmful' : isHate ? 'hate' : 'distraction',
+      // 유해성이 발견된 경우에만 type을 변경
+      if (isHarmful || isViolent) {
+        analysis.type = 'harmful';
+      } else if (isHate) {
+        analysis.type = 'hate';
+      } else if (isDistraction) {
+        analysis.type = 'distraction';
+      }
+
+      // 기존 분석 결과에 유해성 정보 추가
+      analysis = {
+        ...analysis,
         isHarmful,
         isViolent,
         isDistraction,
@@ -390,46 +450,83 @@ export class AdaptiveChatService implements ChatService {
         }
       };
     }
-
-    return {
-      type: 'normal'
-    };
+    
+    console.log('=== analyzeMessage 최종 결과 ===');
+    console.log('최종 분석 결과:', analysis);
+    return analysis;
   }
 
   private selectSystemPrompt(analysis: MessageAnalysis): string {
+    console.log('=== selectSystemPrompt 시작 ===');
+    console.log('입력된 분석 타입:', analysis.type);
+    
+    let prompt: string;
     switch (analysis.type) {
       case 'normal':
-        return '학습자의 질문에 친절하고 명확하게 답변해주세요.';
+        prompt = '학습자의 질문에 친절하고 명확하게 답변해주세요.';
+        break;
       case 'forbidden':
-        return '금칙어가 포함된 질문입니다. 정중하게 거절해주세요.';
+        prompt = '금칙어가 포함된 질문입니다. 정중하게 거절해주세요.';
+        break;
       case 'harmful':
-        return `자살/자해 관련 내용이 감지되었습니다. 다음과 같이 답변해주세요:
+        prompt = `자살/자해 관련 내용이 감지되었습니다. 다음과 같이 답변해주세요:
         1. 공감과 이해를 표현하되, 자살/자해를 조장하지 않도록 주의하세요.
         2. 전문가 상담을 권유하세요.
         3. 긍정적인 대안과 해결방법을 제시하세요.`;
+        break;
       case 'distraction':
-        return `학습에 방해되는 내용이 감지되었습니다. 다음과 같이 답변해주세요:
+        prompt = `학습에 방해되는 내용이 감지되었습니다. 다음과 같이 답변해주세요:
         1. 현재 학습 주제로 돌아올 수 있도록 유도하세요.
         2. 학습 집중의 중요성을 설명하세요.
         3. 구체적인 학습 방법이나 전략을 제안하세요.`;
+        break;
       case 'hate':
-        return `혐오 표현이 감지되었습니다. 다음과 같이 답변해주세요:
+        prompt = `혐오 표현이 감지되었습니다. 다음과 같이 답변해주세요:
         1. 혐오 표현의 부적절성을 설명하세요.
         2. 서로 존중하는 표현의 중요성을 강조하세요.
         3. 건전한 대화를 위한 대안적 표현을 제시하세요.`;
+        break;
+      case 'learning_strategy':
+        prompt = `학습 방법과 전략에 대한 질문입니다. 다음과 같이 답변해주세요:
+        1. 구체적이고 실천 가능한 학습 방법을 제시하세요.
+        2. 단계별로 명확한 설명을 제공하세요.
+        3. 학습 효과를 높일 수 있는 팁을 추가하세요.`;
+        break;
+      case 'motivation':
+        prompt = `동기부여와 심리 관리에 대한 질문입니다. 다음과 같이 답변해주세요:
+        1. 공감과 이해를 바탕으로 답변하세요.
+        2. 긍정적인 마인드셋을 강조하세요.
+        3. 실천 가능한 동기부여 방법을 제안하세요.`;
+        break;
+      case 'learning_distraction':
+        prompt = `학습 방해 활동에 대한 질문입니다. 다음과 같이 답변해주세요:
+        1. 해당 활동이 학습에 미치는 부정적 영향을 설명하세요.
+        2. 학습 집중력 향상을 위한 대안적 방법을 제시하세요.
+        3. 시간 관리와 자기 통제의 중요성을 강조하세요.
+        4. 건전한 휴식과 여가 활동을 추천하세요.`;
+        break;
       default:
-        return '학습자의 질문에 친절하고 명확하게 답변해주세요.';
+        prompt = '학습자의 질문에 친절하고 명확하게 답변해주세요.';
     }
+    
+    console.log('선택된 프롬프트:', prompt);
+    return prompt;
   }
 
   updateStreamingMessage(index: number, text: string): void {
+    console.log('=== updateStreamingMessage 시작 ===');
+    console.log('업데이트할 메시지 인덱스:', index);
+    console.log('새로운 텍스트:', text);
+    
     this._messages = this._messages.map((msg, i) => {
       if (i === index) {
-        return {
+        const updatedMsg = {
           ...msg,
           content: text,
           isStreaming: false
         };
+        console.log('업데이트된 메시지:', updatedMsg);
+        return updatedMsg;
       }
       return msg;
     });

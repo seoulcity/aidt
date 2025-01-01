@@ -7,8 +7,10 @@
   import MessageClassificationGuide from '$lib/components/adaptive-chat/MessageClassificationGuide.svelte';
   import ForbiddenManagement from '$lib/components/adaptive-chat/ForbiddenManagement.svelte';
   import ForbiddenInfoModal from '$lib/components/adaptive-chat/ForbiddenInfoModal.svelte';
+  import EmbeddingModal from '$lib/components/adaptive-chat/EmbeddingModal.svelte';
   import { AdaptiveChatService } from '$lib/services/adaptiveChatService';
   import type { ChatMessage, ScrollEvent, MessageCompleteEvent } from '$lib/types/chat';
+  import { embeddingResults } from '$lib/stores/embeddingStore';
   
   let chatService: AdaptiveChatService;
   let messages: ChatMessage[] = [];
@@ -18,6 +20,7 @@
   let showManagement = false;
   let messageClassificationGuide: MessageClassificationGuide;
   let showForbiddenModal = false;
+  let showEmbeddingModal = false;
   let currentAnalysisInfo: { type: 'harmful' | 'violent' | 'distraction' | 'hate' | 'normal'; reason: string; helpline: string[]; }[] | null = null;
   let currentForbiddenInfo: { category: string; keyword: string; } | null = null;
 
@@ -56,7 +59,9 @@
     const { contexts } = event.detail;
     if (contexts && contexts.length > 0) {
       const context = contexts[0];
-      if (context.category.includes('감지')) {
+      if (context.category === 'embedding') {
+        showEmbeddingModal = true;
+      } else if (context.category.includes('감지')) {
         currentAnalysisInfo = contexts.map(ctx => ({
           type: ctx.category.includes('자살/자해') ? 'harmful' :
                 ctx.category.includes('반사회적') ? 'violent' :
@@ -66,14 +71,15 @@
           helpline: ctx.details || []
         }));
         currentForbiddenInfo = null;
+        showForbiddenModal = true;
       } else {
         currentForbiddenInfo = {
           category: context.category,
           keyword: context.keyword
         };
         currentAnalysisInfo = null;
+        showForbiddenModal = true;
       }
-      showForbiddenModal = true;
     }
   }
 
@@ -81,6 +87,10 @@
     showForbiddenModal = false;
     currentForbiddenInfo = null;
     currentAnalysisInfo = null;
+  }
+
+  function handleCloseEmbeddingModal() {
+    showEmbeddingModal = false;
   }
 
   async function handleSubmit(messageText: string) {
@@ -166,4 +176,9 @@
   forbiddenInfo={currentForbiddenInfo}
   analysisInfo={currentAnalysisInfo}
   on:close={handleCloseModal}
+/>
+
+<EmbeddingModal
+  showModal={showEmbeddingModal}
+  on:close={handleCloseEmbeddingModal}
 /> 

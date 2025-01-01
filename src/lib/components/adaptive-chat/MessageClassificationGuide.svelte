@@ -47,7 +47,7 @@
       </button>
     </div>
 
-    <div class="flex items-center mt-2 space-x-4">
+    <div class="flex flex-wrap items-center mt-2 gap-4">
       {#each messageStyles as style}
         <div class="flex items-center space-x-2">
           <div class="w-4 h-4 rounded {style.backgroundColor}"></div>
@@ -86,45 +86,50 @@
           </div>
 
           <div class="mt-6">
-            <h4 class="font-medium mb-3">메시지 감지 기준</h4>
+            <h4 class="font-medium mb-3">메시지 분류 기준</h4>
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <div class="bg-white p-3 rounded border border-gray-200">
-                <div class="font-medium text-gray-800 mb-1">자살/자해 감지</div>
-                <p class="text-sm text-gray-600 mb-2">자살, 자해 관련 표현이나 위험 신호를 감지합니다.</p>
+                <div class="font-medium text-blue-800 mb-1">학습 방법/전략</div>
+                <p class="text-sm text-gray-600 mb-2">학습과 관련된 실질적인 방법과 전략을 다룹니다.</p>
                 <div class="text-sm text-gray-500">
-                  <div>• 자살, 죽음 관련 직접적 언급</div>
-                  <div>• 극단적 절망감 표현</div>
-                  <div>• 자해 충동이나 시도 언급</div>
+                  <div>• 학습 계획 및 시간 관리</div>
+                  <div>• 문제 풀이 방법과 전략</div>
+                  <div>• 노트 정리와 복습 방법</div>
+                  <div>• 실수 예방과 개선 방법</div>
+                  <div>• 학습 습관과 기본기</div>
                 </div>
               </div>
 
               <div class="bg-white p-3 rounded border border-gray-200">
-                <div class="font-medium text-gray-800 mb-1">반사회적/폭력적 내용 감지</div>
-                <p class="text-sm text-gray-600 mb-2">폭력, 위협, 반사회적 행동을 감지합니다.</p>
+                <div class="font-medium text-purple-800 mb-1">동기부여/정서 관리</div>
+                <p class="text-sm text-gray-600 mb-2">학습 동기와 심리적 어려움을 다룹니다.</p>
                 <div class="text-sm text-gray-500">
-                  <div>• 물리적 폭력 표현</div>
-                  <div>• 위협이나 협박</div>
-                  <div>• 불법 행위 언급</div>
+                  <div>• 자신감과 불안 극복</div>
+                  <div>• 학습 흥미와 동기 부여</div>
+                  <div>• 스트레스와 부정적 감정 관리</div>
+                  <div>• 긍정적 마인드셋 형성</div>
+                  <div>• 의지력과 끈기 향상</div>
                 </div>
               </div>
 
               <div class="bg-white p-3 rounded border border-gray-200">
-                <div class="font-medium text-gray-800 mb-1">학습 방해 요소 감지</div>
-                <p class="text-sm text-gray-600 mb-2">학습에 방해되는 요소나 태도를 감지합니다.</p>
+                <div class="font-medium text-red-800 mb-1">금칙어 감지</div>
+                <p class="text-sm text-gray-600 mb-2">부적절하거나 유해한 내용을 감지합니다.</p>
                 <div class="text-sm text-gray-500">
-                  <div>• 게임, 오락 관련 내용</div>
-                  <div>• 학습 회피 표현</div>
-                  <div>• 집중력 저하 요인</div>
+                  <div>• 비속어와 욕설</div>
+                  <div>• 유해하거나 불법적인 내용</div>
+                  <div>• 차별적이거나 공격적인 표현</div>
                 </div>
               </div>
 
               <div class="bg-white p-3 rounded border border-gray-200">
-                <div class="font-medium text-gray-800 mb-1">혐오 표현 감지</div>
-                <p class="text-sm text-gray-600 mb-2">차별적이거나 혐오성 표현을 감지합니다.</p>
+                <div class="font-medium text-yellow-800 mb-1">부적절한 내용 감지</div>
+                <p class="text-sm text-gray-600 mb-2">학습에 방해되는 내용을 감지합니다.</p>
                 <div class="text-sm text-gray-500">
-                  <div>• 차별적 발언</div>
-                  <div>• 비하 표현</div>
-                  <div>• 모욕적 언어</div>
+                  <div>• 자살/자해 관련 표현</div>
+                  <div>• 폭력적/반사회적 내용</div>
+                  <div>• 학습 방해 요소</div>
+                  <div>• 혐오/차별 표현</div>
                 </div>
               </div>
             </div>

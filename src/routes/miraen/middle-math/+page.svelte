@@ -383,14 +383,21 @@
             <!-- 힌트 버튼 -->
             <div class="mt-6">
               <button
-                class="px-4 py-2 rounded-lg mb-4 {hints[problem.id - 1].loading ? 'opacity-50 cursor-not-allowed' : ''} 
-                    {getButtonText(problem.id - 1).disabled 
-                        ? 'bg-gray-400 text-white cursor-not-allowed' 
-                        : 'bg-green-500 hover:bg-green-600 text-white'}"
+                class="px-4 py-2 bg-white text-[#AC4FF0] border-2 border-[#AC4FF0] rounded-lg shadow-sm hover:shadow-md active:shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:text-white hover:border-transparent hover:bg-gradient-to-r hover:from-[#FF3B9A] hover:via-[#AC4FF0] hover:to-[#4CC9F0] hover:-translate-y-0.5 active:translate-y-0 mb-4"
                 on:click={() => requestHint(problem.id - 1)}
                 disabled={hints[problem.id - 1].loading || getButtonText(problem.id - 1).disabled}
               >
-                {hints[problem.id - 1].loading ? '힌트 불러오는 중...' : getButtonText(problem.id - 1).text}
+                {#if hints[problem.id - 1].loading}
+                  <div class="flex items-center justify-center gap-2">
+                    <div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                    <span>힌트 불러오는 중...</span>
+                  </div>
+                {:else}
+                  <div class="flex items-center justify-center gap-2">
+                    <span class="material-symbols-rounded text-sm">auto_awesome</span>
+                    <span class="font-medium">{getButtonText(problem.id - 1).text}</span>
+                  </div>
+                {/if}
               </button>
 
               <!-- 힌트 표시 -->

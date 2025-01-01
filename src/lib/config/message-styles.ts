@@ -28,5 +28,26 @@ export const messageStyles: MessageStyle[] = [
     backgroundColor: 'bg-yellow-100',
     textColor: 'text-yellow-800',
     icon: 'warning'
+  },
+  {
+    type: 'learning_strategy',
+    description: '학습 방법/전략',
+    backgroundColor: 'bg-blue-100',
+    textColor: 'text-blue-800',
+    icon: 'school'
+  },
+  {
+    type: 'motivation',
+    description: '동기/심리 관리',
+    backgroundColor: 'bg-purple-100',
+    textColor: 'text-purple-800',
+    icon: 'psychology'
+  },
+  {
+    type: 'learning_distraction',
+    description: '학습 방해 활동',
+    backgroundColor: 'bg-orange-100',
+    textColor: 'text-orange-800',
+    icon: 'notifications_active'
   }
 ]; 

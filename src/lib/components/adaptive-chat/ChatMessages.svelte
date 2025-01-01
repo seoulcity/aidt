@@ -2,11 +2,11 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import StreamingText from './StreamingText.svelte';
-  import { messageStyles } from '$lib/config/message-styles';
   import { marked } from 'marked';
   import DOMPurify from 'dompurify';
   import type { ChatMessage } from '$lib/types/chat';
   import InfoIcon from '../grammar-search/InfoIcon.svelte';
+  import EmbeddingInfoIcon from './EmbeddingInfoIcon.svelte';
   
   const dispatch = createEventDispatcher();
   
@@ -58,26 +58,52 @@
   }
 
   function getMessageStyle(message: ChatMessage) {
-    if (message.role === 'user') {
-      return {
-        backgroundColor: 'bg-blue-500',
-        textColor: 'text-white'
-      };
-    }
-
     if (message.isError) {
       return {
         backgroundColor: 'bg-red-100',
-        textColor: 'text-red-700'
+        textColor: 'text-red-700',
+        icon: 'error'
       };
     }
 
-    const style = messageStyles.find(s => s.type === message.type) || messageStyles[0];
-    return {
-      backgroundColor: style.backgroundColor,
-      textColor: style.textColor,
-      icon: style.icon
-    };
+    switch (message.type) {
+      case 'forbidden':
+        return {
+          backgroundColor: 'bg-red-100',
+          textColor: 'text-red-800',
+          icon: 'block'
+        };
+      case 'harmful':
+        return {
+          backgroundColor: 'bg-yellow-100',
+          textColor: 'text-yellow-800',
+          icon: 'warning'
+        };
+      case 'learning_strategy':
+        return {
+          backgroundColor: 'bg-blue-100',
+          textColor: 'text-blue-800',
+          icon: 'school'
+        };
+      case 'motivation':
+        return {
+          backgroundColor: 'bg-purple-100',
+          textColor: 'text-purple-800',
+          icon: 'psychology'
+        };
+      case 'learning_distraction':
+        return {
+          backgroundColor: 'bg-orange-100',
+          textColor: 'text-orange-800',
+          icon: 'notifications_active'
+        };
+      default:
+        return {
+          backgroundColor: message.role === 'user' ? 'bg-blue-500' : 'bg-gray-100',
+          textColor: message.role === 'user' ? 'text-white' : 'text-gray-800',
+          icon: message.role === 'user' ? 'person' : 'chat'
+        };
+    }
   }
 
   function renderMarkdown(text: string): string {
@@ -136,6 +162,9 @@
                         }))}
                         on:showInfo={handleShowInfo}
                       />
+                    {/if}
+                    {#if message.role === 'user' && message.type === 'normal'}
+                      <EmbeddingInfoIcon on:showInfo />
                     {/if}
                   </div>
                 {/if}

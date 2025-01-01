@@ -33,9 +33,19 @@
     <button
       type="submit"
       disabled={isLoading || !newMessage.trim()}
-      class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+      class="px-6 py-2 bg-white text-[#AC4FF0] border-2 border-[#AC4FF0] rounded-lg shadow-sm hover:shadow-md active:shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:text-white hover:border-transparent hover:bg-gradient-to-r hover:from-[#FF3B9A] hover:via-[#AC4FF0] hover:to-[#4CC9F0] hover:-translate-y-0.5 active:translate-y-0"
     >
-      전송
+      {#if isLoading}
+        <div class="flex items-center justify-center gap-2">
+          <div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+          <span>전송 중...</span>
+        </div>
+      {:else}
+        <div class="flex items-center justify-center gap-2">
+          <span class="material-symbols-rounded text-sm">send</span>
+          <span class="font-medium">전송</span>
+        </div>
+      {/if}
     </button>
   </form>
 </div> 
