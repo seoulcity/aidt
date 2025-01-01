@@ -1,13 +1,16 @@
 import { generateEmbedding } from '$lib/utils/embedding';
-import { embeddingResults, predefinedQueries } from '$lib/stores/embeddingStore';
+import { embeddingResults, predefinedQueries, personaChatQueries } from '$lib/stores/embeddingStore';
 import { get } from 'svelte/store';
 
 export class EmbeddingService {
-  static async calculateSimilarities(query) {
+  static async calculateSimilarities(query, usePersonaQueries = false) {
     try {
       console.log('=== 유사도 계산 시작 ===');
       console.log('쿼리:', query);
-      console.log('미리 정의된 쿼리:', predefinedQueries);
+      console.log('페르소나 쿼리 사용:', usePersonaQueries);
+
+      const queries = usePersonaQueries ? personaChatQueries : predefinedQueries;
+      console.log('사용할 쿼리:', queries);
 
       embeddingResults.update(state => ({ ...state, isLoading: true, error: null }));
       
@@ -19,7 +22,7 @@ export class EmbeddingService {
       // 미리 정의된 쿼리들의 임베딩 생성
       console.log('미리 정의된 쿼리 임베딩 생성 중...');
       const predefinedEmbeddings = await Promise.all(
-        predefinedQueries.map(q => generateEmbedding(q.text))
+        queries.map(q => generateEmbedding(q.text))
       );
       console.log('미리 정의된 쿼리 임베딩 생성 완료');
       
@@ -28,9 +31,9 @@ export class EmbeddingService {
       const similarities = predefinedEmbeddings.map((embedding, index) => {
         const similarity = this.cosineSimilarity(queryEmbedding, embedding);
         return {
-          query: predefinedQueries[index].text,
-          category: predefinedQueries[index].category,
-          keywords: predefinedQueries[index].keywords,
+          query: queries[index].text,
+          category: queries[index].category,
+          keywords: queries[index].keywords,
           similarity
         };
       });

@@ -1,17 +1,20 @@
 <!-- src/routes/miraen/middle-math-pro/persona-chat/+page.svelte -->
 <script lang="ts">
   import { onMount } from 'svelte';
-  import ChatMessages from '$lib/components/adaptive-chat/ChatMessages.svelte';
+  import PersonaChatMessages from '$lib/components/persona-chat/PersonaChatMessages.svelte';
   import ChatInput from '$lib/components/adaptive-chat/ChatInput.svelte';
-  import type { StudentPersona } from '$lib/types/persona';
+  import type { StudentPersona, PersonaChatMessage } from '$lib/types/persona';
   import { PersonaChatService } from '$lib/services/personaChatService';
+  import { personaMessageStyles } from '$lib/config/persona-message-styles';
+  import EmbeddingModal from '$lib/components/adaptive-chat/EmbeddingModal.svelte';
   
   let chatService: PersonaChatService;
-  let messages = [];
+  let messages: PersonaChatMessage[] = [];
   let chatContainer: HTMLElement;
   let isLoading = false;
   let autoScroll = true;
   let selectedStudent: StudentPersona | null = null;
+  let showEmbeddingModal = false;
 
   // 예시 학생 데이터 (실제로는 DB나 API에서 가져올 데이터)
   const students: StudentPersona[] = [
@@ -73,8 +76,25 @@
     messages = chatService.getMessages();
   }
 
+  function handleShowInfo() {
+    showEmbeddingModal = true;
+  }
+
+  function handleCloseEmbeddingModal() {
+    showEmbeddingModal = false;
+  }
+
   async function handleSubmit(messageText: string) {
     if (!messageText.trim() || !selectedStudent) return;
+
+    // 즉시 사용자 메시지 추가
+    const userMessage: PersonaChatMessage = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      role: 'user',
+      content: messageText,
+      timestamp: new Date()
+    };
+    messages = [...messages, userMessage];
 
     isLoading = true;
     await chatService.sendMessage(messageText);
@@ -157,17 +177,26 @@
                     </p>
                   {/if}
                 </div>
+                <div class="flex gap-2">
+                  {#each personaMessageStyles as style}
+                    <div class="flex items-center gap-1">
+                      <div class="w-3 h-3 rounded {style.backgroundColor}"></div>
+                      <span class="text-sm text-gray-600">{style.description}</span>
+                    </div>
+                  {/each}
+                </div>
               </div>
             </div>
 
             <div class="flex-1 min-h-0">
-              <ChatMessages
+              <PersonaChatMessages
                 {messages}
                 bind:chatContainer
                 {isLoading}
                 {autoScroll}
                 on:scroll={handleScroll}
                 on:messageComplete={handleMessageComplete}
+                on:showInfo={handleShowInfo}
               />
             </div>
 
@@ -187,4 +216,9 @@
       </div>
     </main>
   </div>
-</div> 
+</div>
+
+<EmbeddingModal
+  showModal={showEmbeddingModal}
+  on:close={handleCloseEmbeddingModal}
+/> 

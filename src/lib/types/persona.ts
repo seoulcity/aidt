@@ -22,8 +22,13 @@ export interface PersonaChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
-  type: 'learning_tip' | 'emotional_support';
-  level?: PerformanceLevel;
+  type?: 'learning_tip' | 'emotional_support';
+  level?: string;
+  isStreaming?: boolean;
   isError?: boolean;
   isDeleted?: boolean;
+  analysis?: {
+    type?: 'learning_tip' | 'emotional_support';
+    similarity: number;
+  };
 } 

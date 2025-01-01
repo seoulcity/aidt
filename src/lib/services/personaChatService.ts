@@ -110,28 +110,49 @@ export class PersonaChatService {
     return this._currentStudent;
   }
 
-  private async analyzeMessageType(messageText: string): Promise<'learning_tip' | 'emotional_support'> {
+  private async analyzeMessageType(messageText: string): Promise<'learning_tip' | 'emotional_support' | undefined> {
     try {
-      const embeddingResult = await EmbeddingService.calculateSimilarities(messageText);
-      const maxSimilarity = embeddingResult.similarities[0]?.similarity || 0;
+      console.log('=== 페르소나 챗 메시지 분석 시작 ===');
+      console.log('입력 메시지:', messageText);
+
+      const embeddingResult = await EmbeddingService.calculateSimilarities(messageText, true);
+      console.log('임베딩 분석 결과:', embeddingResult);
       
+      // 최고 유사도 값 확인
+      const maxSimilarity = embeddingResult.similarities[0]?.similarity || 0;
+      console.log('최고 유사도:', maxSimilarity);
+
+      // 유사도가 0.6(60%) 이상인 경우에만 카테고리 설정
       if (maxSimilarity >= 0.6) {
-        if (embeddingResult.category === '학습팁' || embeddingResult.category === '학습 방법/전략') {
+        // 페르소나 챗에서는 학습팁과 동기부여/정서 두 카테고리만 처리
+        if (embeddingResult.category === '학습팁') {
+          console.log('카테고리: 학습 방법/전략');
           return 'learning_tip';
         } else if (embeddingResult.category === '동기부여/정서') {
+          console.log('카테고리: 동기/심리 관리');
           return 'emotional_support';
         }
       }
       
-      // 기본값으로 학습팁 반환
-      return 'learning_tip';
+      console.log('유사도가 60% 미만이거나 다른 카테고리임');
+      return undefined;
     } catch (error) {
       console.error('메시지 타입 분석 오류:', error);
-      return 'learning_tip';
+      return undefined;
     }
   }
 
-  private getPromptForStudent(type: 'learning_tip' | 'emotional_support'): string {
+  private getPromptForStudent(type: 'learning_tip' | 'emotional_support' | undefined): string {
+    if (!type) {
+      // 일반 메시지의 경우 기본 프롬프트 사용
+      return `당신은 수학 학습을 돕는 선생님입니다. 
+      다음과 같은 방향으로 답변해주세요:
+      1. 친근하고 이해하기 쉬운 언어 사용
+      2. 학생의 수준에 맞는 설명 제공
+      3. 긍정적이고 격려하는 톤 유지
+      4. 필요한 경우 추가 질문 유도`;
+    }
+
     if (!this._currentStudent || !this._currentStudent.averageLevel) {
       return this.prompts.find(p => p.level === '중' && p.type === type)?.prompt || '';
     }
@@ -146,15 +167,22 @@ export class PersonaChatService {
     if (this.isLoading) return { success: false };
 
     const messageId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // 메시지 분석 수행
     const messageType = await this.analyzeMessageType(messageText);
+    console.log('분석된 메시지 타입:', messageType);
 
+    // 사용자 메시지 추가 (타입 포함)
     const userMessage: PersonaChatMessage = {
       id: messageId,
       role: 'user',
       content: messageText,
       timestamp: new Date(),
       type: messageType,
-      level: this._currentStudent.averageLevel
+      analysis: {
+        type: messageType,
+        similarity: messageType ? 0.6 : 0  // 분석 결과가 있는 경우 최소 60% 이상
+      }
     };
 
     this._messages = [...this._messages, userMessage];
@@ -178,13 +206,19 @@ export class PersonaChatService {
 
       const result = await response.json();
 
+      // 어시스턴트 메시지에도 동일한 분석 결과 포함
       const assistantMessage: PersonaChatMessage = {
         id: `${messageId}-response`,
         role: 'assistant',
         content: result.content,
         timestamp: new Date(),
         type: messageType,
-        level: this._currentStudent.averageLevel
+        level: this._currentStudent.averageLevel,
+        isStreaming: true,
+        analysis: {
+          type: messageType,
+          similarity: messageType ? 0.6 : 0
+        }
       };
 
       this._messages = [...this._messages, assistantMessage];
@@ -196,8 +230,7 @@ export class PersonaChatService {
         role: 'system',
         content: '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
         timestamp: new Date(),
-        isError: true,
-        type: messageType
+        isError: true
       };
       this._messages = [...this._messages, errorMessage];
       return { success: false, error };
