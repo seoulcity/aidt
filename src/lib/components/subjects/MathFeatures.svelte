@@ -67,16 +67,18 @@
             icon: 'monitoring',
             features: [
                 {
+                    href: '/miraen/middle-math-pro/learning-comments',
                     title: '학습 평어 생성 기능',
                     description: '학습자의 단원별 성취를 바탕으로 정성적인 학습분석 결과를 생성합니다',
                     icon: 'description',
-                    disabled: true
+                    color: 'purple'
                 },
                 {
+                    href: '/miraen/middle-math-pro/student-alerts',
                     title: '학습자 알림 기능',
                     description: '문제를 풀지 않고 답안을 제출했거나, 성취도와 참여도가 떨어진 학생을 감지합니다',
                     icon: 'notifications',
-                    disabled: true
+                    color: 'orange'
                 }
             ]
         }
