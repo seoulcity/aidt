@@ -143,23 +143,31 @@ export class PersonaChatService {
   }
 
   private getPromptForStudent(type: 'learning_tip' | 'emotional_support' | undefined): string {
+    const basePrompt = `당신은 수학 학습을 돕는 선생님입니다.
+답변 시 다음 사항을 지켜주세요:
+1. 학생의 질문 길이와 성격에 맞게 적절한 길이로 답변
+2. 핵심적인 내용만 간단명료하게 전달
+3. 불필요한 설명이나 반복은 제외
+4. 학생이 추가 질문을 하면 그때 더 자세히 설명`;
+
     if (!type) {
       // 일반 메시지의 경우 기본 프롬프트 사용
-      return `당신은 수학 학습을 돕는 선생님입니다. 
-      다음과 같은 방향으로 답변해주세요:
-      1. 친근하고 이해하기 쉬운 언어 사용
-      2. 학생의 수준에 맞는 설명 제공
-      3. 긍정적이고 격려하는 톤 유지
-      4. 필요한 경우 추가 질문 유도`;
+      return `${basePrompt}
+추가 지침:
+1. 친근하고 이해하기 쉬운 언어 사용
+2. 학생의 수준에 맞는 설명 제공
+3. 긍정적이고 격려하는 톤 유지`;
     }
 
     if (!this._currentStudent || !this._currentStudent.averageLevel) {
-      return this.prompts.find(p => p.level === '중' && p.type === type)?.prompt || '';
+      const prompt = this.prompts.find(p => p.level === '중' && p.type === type)?.prompt || '';
+      return `${basePrompt}\n${prompt}`;
     }
 
-    return this.prompts.find(
+    const prompt = this.prompts.find(
       p => p.level === this._currentStudent?.averageLevel && p.type === type
     )?.prompt || '';
+    return `${basePrompt}\n${prompt}`;
   }
 
   async sendMessage(messageText: string) {
