@@ -220,7 +220,7 @@ export class AdaptiveChatService implements ChatService {
     // 임베딩 유사도 계산을 먼저 수행
     try {
       console.log('임베딩 유사도 계산 시작...');
-      const embeddingResult = await EmbeddingService.calculateSimilarities(messageText);
+      const embeddingResult = await EmbeddingService.calculateSimilarities(messageText, false);
       console.log('임베딩 분석 결과:', embeddingResult);
       
       // 최고 유사도 값 확인 (상위 5개 중 첫 번째)
@@ -229,7 +229,7 @@ export class AdaptiveChatService implements ChatService {
 
       // 유사도가 0.6(60%) 이상인 경우에만 카테고리 설정
       if (maxSimilarity >= 0.6) {
-        if (embeddingResult.category === '학습 방법/전략') {
+        if (embeddingResult.category === '학습팁') {
           analysis.type = 'learning_strategy';
           console.log('카테고리가 학습 방법/전략으로 설정됨');
         } else if (embeddingResult.category === '동기부여/정서') {

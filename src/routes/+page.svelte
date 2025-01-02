@@ -13,7 +13,7 @@
 			id: 'math',
 			title: '수학 교과 기능',
 			icon: 'functions',
-			count: 2,
+			count: 7,
 			countColor: 'blue'
 		},
 		{

@@ -2,6 +2,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import PersonaChatMessages from '$lib/components/persona-chat/PersonaChatMessages.svelte';
+  import PersonaChatGuide from '$lib/components/persona-chat/PersonaChatGuide.svelte';
   import ChatInput from '$lib/components/adaptive-chat/ChatInput.svelte';
   import type { StudentPersona, PersonaChatMessage } from '$lib/types/persona';
   import { PersonaChatService } from '$lib/services/personaChatService';
@@ -11,6 +12,7 @@
   let chatService: PersonaChatService;
   let messages: PersonaChatMessage[] = [];
   let chatContainer: HTMLElement;
+  let chatInput: any;
   let isLoading = false;
   let autoScroll = true;
   let selectedStudent: StudentPersona | null = null;
@@ -189,15 +191,22 @@
             </div>
 
             <div class="flex-1 min-h-0">
-              <PersonaChatMessages
-                {messages}
-                bind:chatContainer
-                {isLoading}
-                {autoScroll}
-                on:scroll={handleScroll}
-                on:messageComplete={handleMessageComplete}
-                on:showInfo={handleShowInfo}
-              />
+              {#if messages.length > 0}
+                <PersonaChatMessages
+                  {messages}
+                  bind:chatContainer
+                  {isLoading}
+                  {autoScroll}
+                  on:scroll={handleScroll}
+                  on:messageComplete={handleMessageComplete}
+                  on:showInfo={handleShowInfo}
+                />
+              {:else}
+                <PersonaChatGuide
+                  {messages}
+                  onExampleClick={handleSubmit}
+                />
+              {/if}
             </div>
 
             <ChatInput 
