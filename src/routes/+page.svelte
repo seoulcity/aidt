@@ -20,7 +20,7 @@
 			id: 'english',
 			title: '영어 교과 기능',
 			icon: 'translate',
-			count: 3,
+			count: 4,
 			countColor: 'gray'
 		}
 	];
@@ -47,7 +47,7 @@
 			<h1 class="text-xl font-semibold text-gray-800">AI다움</h1>
 			<span class="px-2 py-0.5 text-xs bg-blue-50 text-blue-500 rounded-full">βeta</span>
 		</div>
-		<p class="text-gray-600">AI 디지털교과서 솔루션</p>
+		<p class="text-gray-600">클라비 AI 디지털교과서 솔루션</p>
 	</header>
 
 	<TabNavigation {tabs} {activeTab} onTabChange={switchTab} />

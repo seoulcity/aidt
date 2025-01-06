@@ -28,6 +28,13 @@
                     description: '영문법을 쉽게 검색해보세요',
                     icon: 'search',
                     color: 'purple'
+                },
+                {
+                    href: '/miraen/pronunciation',
+                    title: '영어 발음 평가',
+                    description: '영어 발음을 평가하고 교정받아보세요',
+                    icon: 'record_voice_over',
+                    color: 'orange'
                 }
             ]
         }
