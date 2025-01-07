@@ -48,7 +48,7 @@ export default defineConfig({
 ```
 server {
   listen 80;
-  server_name db.corp.reviews;
+  server_name YOUR_DOMAIN_NAME;
   return 301 https://$server_name$request_uri;
 }
 
@@ -176,19 +176,19 @@ export default defineConfig({
 });
 ```
 5. Nginx 구성:
-  다음 내용으로 `/etc/nginx/sites-available/corpreviews-db.conf Nginx` 구성 파일을 생성합니다:
+  다음 내용으로 `/etc/nginx/sites-available/{service-title}.conf Nginx` 구성 파일을 생성합니다:
 ```
 server {
   listen 80;
-  server_name db.corp.reviews;
+  server_name YOUR_DOMAIN_NAME;
   return 301 https://$server_name$request_uri;
 }
 
 server {
   listen 443 ssl;
-  server_name db.corp.reviews;
-  ssl_certificate /etc/letsencrypt/live/db.corp.reviews/fullchain.pem;
-  ssl_certificate_key /etc/letsencrypt/live/db.corp.reviews/privkey.pem;
+  server_name YOUR_DOMAIN_NAME;
+  ssl_certificate /etc/letsencrypt/live/YOUR_DOMAIN_NAME/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/YOUR_DOMAIN_NAME/privkey.pem;
 
   location / {
     proxy_pass http://localhost:5173;
