@@ -12,9 +12,10 @@
 	"devDependencies": {
 		"@supabase/supabase-js": "^2.43.1",
 		"@sveltejs/adapter-auto": "^3.0.0",
-		"@sveltejs/kit": "^2.0.0",
+		"@sveltejs/kit": "^2.8.1",
 		"@sveltejs/vite-plugin-svelte": "^3.0.0",
 		"@types/eslint": "^8.56.0",
+		"@types/katex": "^0.16.7",
 		"autoprefixer": "^10.4.19",
 		"eslint": "^8.56.0",
 		"eslint-config-prettier": "^9.1.0",
@@ -28,6 +29,22 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"dotenv": "^16.4.5"
+		"@langchain/core": "^0.3.18",
+		"@material-symbols/font-400": "^0.27.2",
+		"@types/dompurify": "^3.0.5",
+		"@types/marked": "^5.0.2",
+		"cookie": "^1.0.1",
+		"dompurify": "^3.2.3",
+		"dotenv": "^16.4.5",
+		"katex": "^0.16.11",
+		"langchain": "^0.3.8",
+		"marked": "^15.0.4",
+		"mathjax": "^3.2.2",
+		"mathlive": "^0.102.0",
+		"pdfjs-dist": "^4.8.69",
+		"pretty-data": "^0.40.0",
+		"tailwind-scrollbar": "^3.1.0",
+		"vkbeautify": "^0.99.3",
+		"zod": "^3.23.8"
 	}
 }

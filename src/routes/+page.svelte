@@ -1,77 +1,69 @@
 <!-- src/routes/+page.svelte -->
 
-<script>
-  import { chatCompletion } from '$lib/clovaStudioService';
-  import { onMount } from 'svelte';
+<script lang="ts">
+	import type { TabItem } from '$lib/types/navigation';
+	import MathFeatures from '$lib/components/subjects/MathFeatures.svelte';
+	import EnglishFeatures from '$lib/components/subjects/EnglishFeatures.svelte';
+	import TabNavigation from '$lib/components/navigation/TabNavigation.svelte';
+	
+	let activeTab: 'math' | 'english' = 'math';
 
-  let userInput = '';
-  let chatHistory = [];
-  let isLoading = false;
+	const tabs: TabItem[] = [
+		{
+			id: 'math',
+			title: '수학 교과 기능',
+			icon: 'functions',
+			count: 7,
+			countColor: 'blue'
+		},
+		{
+			id: 'english',
+			title: '영어 교과 기능',
+			icon: 'translate',
+			count: 4,
+			countColor: 'gray'
+		}
+	];
 
-  async function handleSubmit() {
-    if (!userInput.trim()) return;
-
-    isLoading = true;
-    chatHistory = [...chatHistory, { role: 'user', content: userInput }];
-    const userMessage = userInput;
-    userInput = '';
-
-    try {
-      const response = await chatCompletion(userMessage);
-      chatHistory = [...chatHistory, { role: 'assistant', content: response }];
-    } catch (error) {
-      console.error('Error:', error);
-      chatHistory = [...chatHistory, { role: 'assistant', content: '죄송합니다. 오류가 발생했습니다.' }];
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  onMount(() => {
-    const chatContainer = document.getElementById('chat-container');
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-  });
+	function switchTab(tabId: string) {
+		activeTab = tabId as 'math' | 'english';
+		const mathSection = document.querySelector('section:first-of-type')!;
+		const englishSection = document.querySelector('section:last-of-type')!;
+		
+		if (tabId === 'english') {
+			mathSection.classList.add('hidden');
+			englishSection.classList.remove('hidden');
+		} else {
+			mathSection.classList.remove('hidden');
+			englishSection.classList.add('hidden');
+		}
+	}
 </script>
 
 <div class="container mx-auto px-4 py-8">
-	<header class="mb-8">
-		<h1 class="text-4xl font-bold mb-4">CLOVA Studio Chat</h1>
-		<p class="text-xl text-gray-600">CLOVA Studio API를 사용한 간단한 채팅 인터페이스입니다.</p>
-		<a href="/writing-correction" class="text-blue-500 hover:underline">영작문 교정기로 이동</a>
+	<header class="mb-8 text-center">
+		<img src="/og_img.png" alt="미래엔 로고" class="mx-auto mb-4 max-w-md" />
+		<div class="flex items-center justify-center gap-2 mb-2">
+			<h1 class="text-xl font-semibold text-gray-800">AI다움</h1>
+			<span class="px-2 py-0.5 text-xs bg-blue-50 text-blue-500 rounded-full">βeta</span>
+		</div>
+		<p class="text-gray-600">클라비 AI 디지털교과서 솔루션</p>
 	</header>
 
-	<div id="chat-container" class="bg-white rounded-lg shadow-md p-6 mb-4 h-96 overflow-y-auto">
-		{#each chatHistory as message}
-			<div class={`mb-4 ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
-				<span class={`inline-block p-2 rounded-lg ${message.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
-					{message.content}
-				</span>
-			</div>
-		{/each}
-		{#if isLoading}
-			<div class="text-center">
-				<span class="inline-block p-2 bg-gray-200 text-gray-800 rounded-lg">응답을 생성 중입니다...</span>
-			</div>
-		{/if}
+	<TabNavigation {tabs} {activeTab} onTabChange={switchTab} />
+
+	<div class="max-w-6xl mx-auto mb-16">
+		<section>
+			<MathFeatures />
+		</section>
+
+		<section class="hidden">
+			<EnglishFeatures />
+		</section>
 	</div>
 
-	<form on:submit|preventDefault={handleSubmit} class="flex">
-		<input
-			type="text"
-			bind:value={userInput}
-			placeholder="메시지를 입력하세요..."
-			class="flex-grow p-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-		/>
-		<button
-			type="submit"
-			class="bg-blue-500 text-white p-2 rounded-r-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-			disabled={isLoading}
-		>
-			전송
-		</button>
-	</form>
+	<footer class="text-center mt-auto">
+		<p class="text-gray-600 mb-2">Powered by</p>
+		<img src="/unnamed.jpg" alt="Powered by" class="mx-auto max-w-[200px] mb-4" />
+	</footer>
 </div>
-
-<style>
-	/* 여기에 필요한 스타일을 추가하세요 */
-</style>

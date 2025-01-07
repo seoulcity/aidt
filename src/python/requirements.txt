@@ -1,0 +1,6 @@
+fastapi
+python-multipart
+uvicorn
+pymupdf4llm
+python-jose[cryptography]
+passlib[bcrypt] 

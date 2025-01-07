@@ -9,3 +9,12 @@ node_modules
 .npmrc
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+*.ipynb
+files/
+nohup.out
+venv/
+src/__pycache__/
+# Embedding data
+static/embeddings/
+server.log
+temp

@@ -18,6 +18,16 @@
   let isSidebarOpen = true;
   let sessions = [];
   let currentSessionId = null;
+  let showGenerateOptions = false;
+  let isEditing = false;
+  let editableInfo = {
+    title: '',
+    what: '',
+    when: '',
+    where: '',
+    who: '',
+    why: ''
+  };
 
   onMount(async () => {
     await loadSessions();
@@ -137,14 +147,30 @@
         conversationHistory
       });
 
-      // 세션이 없는 경우에만 새로 생성
+      // 세션이 없는 경우에만 새로 생성하고 제목 설정
       if (!currentSessionId) {
         console.log('Creating new session...');
-        const newSessionId = await createNewSession();
-        if (!newSessionId) {
+        // 입력된 내용으로 제목 생성
+        const title = await chatCompletion(
+          '당신은 보도자료의 제목을 생성하는 전문가입니다. 주어진 내용을 바탕으로 10자 이내의 간단명료한 제목을 생성해주세요.',
+          `다음 내용에 대한 10자 이내의 보도자료 제목을 생성해주세요. 제목만 작성하고 다른 설명은 하지 마세요: ${currentInput}`
+        );
+
+        // 새 세션 생성 시 생성된 제목 사용
+        const { data, error } = await supabase
+          .from('press_release_sessions')
+          .insert([{ title: title.trim() }])
+          .select()
+          .single();
+
+        if (error || !data) {
           throw new Error('Failed to create new session');
         }
-        console.log('New session created:', newSessionId);
+        currentSessionId = data.id;
+        console.log('New session created:', currentSessionId);
+        
+        // 세션 목록 업데이트
+        await loadSessions();
       }
 
       const historyText = conversationHistory.map(item => 
@@ -192,33 +218,18 @@
 
       const validationResult = response.includes('판단: 1');
       if (validationResult) {
-        console.log('Validation passed, generating press release...');
-        // 보도자료 생성 시작 메시지 추가
-        const generatingMessage = '✨ 모든 정보가 수집되었습니다. 보도자료를 생성하고 있습니다...';
-        await saveMessage('assistant', generatingMessage);
-        conversationHistory = [...conversationHistory, {
-          type: 'assistant',
-          content: generatingMessage,
-          session_id: currentSessionId
-        }];
+        showGenerateOptions = true;
+        const analysisSection = response.split('분석 결과:')[1].split('다음 질문:')[0];
+        const lines = analysisSection.split('\n').filter(line => line.trim());
         
-        const allInput = conversationHistory
-          .filter(item => item.type === 'user')
-          .map(item => item.content)
-          .join('\n');
-        
-        const pressRelease = await generatePressRelease(allInput);
-        finalPressRelease = pressRelease;
-        isComplete = true;
-
-        // 생성 완료 메시지 추가
-        const completionMessage = '✅ 보도자료가 생성되었습니다. 아래에서 확인하실 수 있습니다.';
-        await saveMessage('assistant', completionMessage);
-        conversationHistory = [...conversationHistory, {
-          type: 'assistant',
-          content: completionMessage,
-          session_id: currentSessionId
-        }];
+        editableInfo = {
+          title: lines.find(l => l.includes('주제/제목'))?.split(':')[1]?.trim() || '',
+          what: lines.find(l => l.includes('주요 내용'))?.split(':')[1]?.trim() || '',
+          when: lines.find(l => l.includes('시기'))?.split(':')[1]?.trim() || '',
+          where: lines.find(l => l.includes('장소'))?.split(':')[1]?.trim() || '',
+          who: lines.find(l => l.includes('관련 조직/인물'))?.split(':')[1]?.trim() || '',
+          why: lines.find(l => l.includes('목적/의의'))?.split(':')[1]?.trim() || ''
+        };
       }
 
       userInput = '';
@@ -243,6 +254,61 @@
     isComplete = false;
     userInput = '';
     // currentSessionId는 여기서 초기화하지 않음
+  }
+
+  async function handleGeneratePress() {
+    showGenerateOptions = false;
+    isLoading = true;
+    
+    try {
+      // 보도자료 생성 시작 메시지 추가
+      const generatingMessage = '✨ 모든 정보가 수집되었습니다. 보도자료를 생성하고 있습니다...';
+      await saveMessage('assistant', generatingMessage);
+      conversationHistory = [...conversationHistory, {
+        type: 'assistant',
+        content: generatingMessage,
+        session_id: currentSessionId
+      }];
+      
+      // 수정된 정보를 포맷팅
+      const formattedInfo = `
+주제/제목: ${editableInfo.title}
+주요 내용(What): ${editableInfo.what}
+시기(When): ${editableInfo.when}
+장소(Where): ${editableInfo.where}
+관련 조직/인물(Who): ${editableInfo.who}
+목적/의의(Why): ${editableInfo.why}
+      `.trim();
+      
+      const pressRelease = await generatePressRelease(formattedInfo);
+      finalPressRelease = pressRelease;
+      isComplete = true;
+
+      // 생성 완료 메시지 추가
+      const completionMessage = '✅ 보도자료가 생성되었습니다. 아래에서 확인하실 수 있습니다.';
+      await saveMessage('assistant', completionMessage);
+      conversationHistory = [...conversationHistory, {
+        type: 'assistant',
+        content: completionMessage,
+        session_id: currentSessionId
+      }];
+    } catch (error) {
+      console.error('Error generating press release:', error);
+      const errorMessage = '보도자료 생성 중 오류가 발생했습니다.';
+      await saveMessage('error', errorMessage);
+      conversationHistory = [...conversationHistory, {
+        type: 'error',
+        content: errorMessage,
+        session_id: currentSessionId
+      }];
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  function handleEditInfo() {
+    isEditing = true;
+    showGenerateOptions = false;
   }
 </script>
 
@@ -465,6 +531,140 @@
             새로운 보도자료 작성
           </button>
         </div>
+      {/if}
+
+      {#if showGenerateOptions && !isEditing}
+        <div class="bg-white border rounded-lg p-6 mb-6 shadow-sm">
+          <h3 class="text-lg font-semibold mb-4">필요한 정보가 모두 수집되었습니다.</h3>
+          <div class="flex gap-4">
+            <button
+              class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+              on:click={handleGeneratePress}
+            >
+              보도자료 생성하기
+            </button>
+            <button
+              class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600"
+              on:click={handleEditInfo}
+            >
+              수집된 정보 수정하기
+            </button>
+          </div>
+        </div>
+      {/if}
+
+      {#if isEditing}
+        <div class="bg-white border rounded-lg p-6 mb-6 shadow-sm">
+          <h3 class="text-lg font-semibold mb-4">수집된 정보 수정</h3>
+          <div class="space-y-4">
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">주제/제목</label>
+                <input
+                  type="text"
+                  bind:value={editableInfo.title}
+                  class="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">주요 내용 (What)</label>
+                <textarea
+                  bind:value={editableInfo.what}
+                  class="w-full p-2 border rounded h-24"
+                ></textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">시기 (When)</label>
+                <input
+                  type="text"
+                  bind:value={editableInfo.when}
+                  class="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">장소 (Where)</label>
+                <input
+                  type="text"
+                  bind:value={editableInfo.where}
+                  class="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">관련 조직/인물 (Who)</label>
+                <input
+                  type="text"
+                  bind:value={editableInfo.who}
+                  class="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">목적/의의 (Why)</label>
+                <textarea
+                  bind:value={editableInfo.why}
+                  class="w-full p-2 border rounded h-24"
+                ></textarea>
+              </div>
+            </div>
+            <div class="flex justify-end gap-4 mt-4">
+              <button
+                class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                on:click={handleGeneratePress}
+                disabled={isLoading}
+              >
+                {isLoading ? '생성 중...' : '수정된 정보로 생성하기'}
+              </button>
+              <button
+                class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 disabled:cursor-not-allowed"
+                on:click={() => {
+                  isEditing = false;
+                  showGenerateOptions = true;
+                }}
+                disabled={isLoading}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {#if isLoading}
+          <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="animate-spin h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-yellow-700">
+                  보도자료를 생성하고 있습니다. 잠시만 기다려주세요...
+                </p>
+              </div>
+            </div>
+          </div>
+        {/if}
+
+        {#if finalPressRelease}
+          <div class="bg-white border rounded-lg p-6 shadow-sm">
+            <h3 class="text-lg font-semibold mb-4">생성된 보도자료</h3>
+            <div class="whitespace-pre-wrap">
+              {finalPressRelease}
+            </div>
+            <div class="mt-4 flex justify-end">
+              <button
+                class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
+                on:click={() => {
+                  isEditing = false;
+                  showGenerateOptions = false;
+                  resetConversation();
+                }}
+              >
+                새로운 보도자료 작성
+              </button>
+            </div>
+          </div>
+        {/if}
       {/if}
     </div>
   </div>
