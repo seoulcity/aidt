@@ -32,7 +32,8 @@
                     title: '손글씨 풀이 피드백',
                     description: '수식이 포함된 손글씨 풀이에 피드백과 힌트를 제공합니다',
                     icon: 'draw',
-                    disabled: true
+                    href: '/math/handwriting',
+                    color: 'blue'
                 }
             ]
         },

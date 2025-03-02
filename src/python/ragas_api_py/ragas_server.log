@@ -1,0 +1,18 @@
+INFO:     Will watch for changes in these directories: ['/home/jhkim/english/src/python/ragas_api_py']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [619118] using StatReload
+INFO:     Started server process [619121]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+2025-03-02 19:15:47,123 - server - INFO - Received evaluation request for metrics: ['answer_relevancy', 'faithfulness']
+2025-03-02 19:15:47,359 - server - INFO - LLM initialized successfully
+2025-03-02 19:15:47,565 - server - INFO - Embeddings model initialized successfully
+2025-03-02 19:15:47,576 - server - INFO - All metrics initialized successfully
+2025-03-02 19:15:48,233 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-03-02 19:15:48,255 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-03-02 19:15:48,283 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-03-02 19:15:49,222 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-03-02 19:15:49,720 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-03-02 19:15:52,358 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-03-02 19:15:55,552 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:56494 - "POST /evaluate HTTP/1.1" 200 OK
