@@ -456,14 +456,35 @@ export async function retryResponse(
     
     // If we have a response, update the database
     if (streamingText && metadata) {
-      // Save the new response
-      await supabase.from('responses').insert({
-        text: streamingText,
-        metadata: JSON.stringify(metadata),
-        batch_id: batchId || null
-      });
-      
-      return true;
+      try {
+        // Save the new response
+        const { data, error } = await supabase.from('clario_responses').insert({
+          response_text: streamingText,
+          input_text: response.input_text,
+          reference: metadata.reference || null,
+          recommended_questions: metadata.recommended_questions || null,
+          images: metadata.images || null,
+          action: metadata.action || '',
+          sub_action: metadata.sub_action || null,
+          token_count: metadata.token_count || 0,
+          response_id: metadata.response_id || `retry_${response.id}_${Date.now()}`,
+          latency: metadata.latency || 0,
+          batch_id: batchId || null,
+          is_batch: !!batchId,
+          query_category: response.query_category || null
+        }).select();
+        
+        if (error) {
+          console.error('Error saving response to database:', error);
+          throw new Error(`데이터베이스 저장 오류: ${error.message}`);
+        }
+        
+        console.log('Successfully saved response to database:', data);
+        return true;
+      } catch (dbError) {
+        console.error('Database operation failed:', dbError);
+        throw dbError;
+      }
     } else {
       throw new Error('응답을 받지 못했습니다. 스트리밍 텍스트: ' + (streamingText ? '있음' : '없음') + ', 메타데이터: ' + (metadata ? '있음' : '없음'));
     }
