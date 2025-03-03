@@ -4,6 +4,7 @@
   import { resultStore } from '../stores/resultStore';
   import { isValidArray, formatDate } from '../stores/resultStoreUtils';
   import ResponseItem from '../components/ResponseItem.svelte';
+  import SearchBar from '../components/SearchBar.svelte';
   
   onMount(() => {
     resultStore.loadData();
@@ -19,6 +20,19 @@
   function handleDelete(event: CustomEvent<{ id: number }>) {
     const { id } = event.detail;
     resultStore.deleteResponse(id);
+  }
+
+  // Get the total pages from the store - make it more reactive to store changes
+  $: totalPages = $resultStore.totalCount ? Math.ceil($resultStore.totalCount / $resultStore.itemsPerPage) : 0;
+  $: visiblePageNumbers = totalPages ? Array.from({ length: totalPages }, (_, i) => i + 1).filter(
+    page => page === 1 || page === totalPages || 
+    (page >= $resultStore.currentPage - 2 && page <= $resultStore.currentPage + 2)
+  ) : [];
+  
+  // Watch for category changes and update pagination
+  $: if ($resultStore.selectedCategory) {
+    // This will trigger when the selected category changes
+    totalPages = $resultStore.totalCount ? Math.ceil($resultStore.totalCount / $resultStore.itemsPerPage) : 0;
   }
 
   // Batch retry functionality
@@ -81,6 +95,28 @@
     } else {
       return $resultStore.allResponses.filter(r => r.query_category === category).length;
     }
+  }
+  
+  // Search functionality
+  let searchQuery = '';
+  
+  function handleSearch(event: CustomEvent<{ query: string }>) {
+    searchQuery = event.detail.query;
+    resultStore.searchResponses(searchQuery);
+  }
+  
+  function clearSearch() {
+    searchQuery = '';
+    resultStore.clearSearch();
+  }
+  
+  // Function to handle category filter click
+  function handleCategoryFilter(category: string) {
+    // Clear the search query in the component
+    searchQuery = '';
+    // Apply the category filter (which also clears search in the store)
+    resultStore.filterByCategory(category);
+    // The reactive variables will update automatically
   }
 </script>
 
@@ -167,18 +203,46 @@
         목록으로 돌아가기
       </button>
       
-      <!-- 카테고리 필터 버튼 -->
+      <!-- 검색 기능 -->
       <div class="mb-6">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="text-lg font-semibold">카테고리 필터</h2>
+          <h2 class="text-lg font-semibold">검색</h2>
           <span class="px-2 py-1 bg-gray-100 text-sm rounded-full">
             {$resultStore.isIndividualMode ? '단독 수행' : '배치 수행'}
           </span>
         </div>
+        <div class="mb-4">
+          <SearchBar 
+            value={searchQuery} 
+            placeholder="질문 또는 답변 내용 검색..." 
+            on:search={handleSearch}
+            on:clear={clearSearch}
+          />
+          {#if searchQuery}
+            <p class="mt-2 text-sm text-gray-600">
+              "{searchQuery}" 검색 결과: {$resultStore.totalCount}개
+              {#if $resultStore.totalCount > 0}
+                <button 
+                  class="ml-2 text-blue-500 hover:text-blue-700 underline"
+                  on:click={clearSearch}
+                >
+                  검색 초기화
+                </button>
+              {/if}
+            </p>
+          {/if}
+        </div>
+      </div>
+      
+      <!-- 카테고리 필터 버튼 -->
+      <div class="mb-6">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-lg font-semibold">카테고리 필터</h2>
+        </div>
         <div class="flex flex-wrap gap-2">
           <button
             class="px-4 py-2 rounded-full text-sm {$resultStore.selectedCategory === '전체' ? 'bg-green-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}"
-            on:click={() => resultStore.filterByCategory('전체')}
+            on:click={() => handleCategoryFilter('전체')}
             disabled={$resultStore.loading}
           >
             전체
@@ -195,7 +259,7 @@
                       ? 'bg-red-100 hover:bg-red-200 text-red-800'
                       : 'bg-gray-100 hover:bg-gray-200'
                 }"
-                on:click={() => resultStore.filterByCategory(category)}
+                on:click={() => handleCategoryFilter(category)}
                 disabled={$resultStore.loading}
               >
                 {category}
@@ -208,15 +272,38 @@
       <div class="space-y-6">
         {#if $resultStore.responses.length === 0}
           <div class="p-8 text-center bg-gray-50 rounded-lg border">
-            <p class="text-gray-500">표시할 결과가 없습니다.</p>
+            {#if $resultStore.searchQuery}
+              <p class="text-gray-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                </svg>
+                "<span class="font-medium">{$resultStore.searchQuery}</span>"에 대한 검색 결과가 없습니다.
+                <button 
+                  class="ml-2 text-blue-500 hover:text-blue-700 underline"
+                  on:click={clearSearch}
+                >
+                  검색 초기화
+                </button>
+              </p>
+            {:else}
+              <p class="text-gray-500">표시할 결과가 없습니다.</p>
+            {/if}
           </div>
         {:else}
           <!-- 결과 수와 페이지 정보 표시 -->
           <div class="flex justify-between items-center mb-4">
             <p class="text-sm text-gray-500">
-              총 {$resultStore.totalCount}개 결과 중 {($resultStore.currentPage - 1) * $resultStore.itemsPerPage + 1}-{Math.min($resultStore.currentPage * $resultStore.itemsPerPage, $resultStore.totalCount)}
+              {#if $resultStore.searchQuery}
+                검색 결과 {$resultStore.totalCount}개 중 {($resultStore.currentPage - 1) * $resultStore.itemsPerPage + 1}-{Math.min($resultStore.currentPage * $resultStore.itemsPerPage, $resultStore.totalCount)}
+              {:else}
+                총 {$resultStore.totalCount}개 결과 중 {($resultStore.currentPage - 1) * $resultStore.itemsPerPage + 1}-{Math.min($resultStore.currentPage * $resultStore.itemsPerPage, $resultStore.totalCount)}
+              {/if}
             </p>
-            <p class="text-sm text-gray-500">페이지 {$resultStore.currentPage} / {resultStore.totalPages}</p>
+            <p class="text-sm text-gray-500">
+              페이지 {$resultStore.currentPage} / {totalPages || 1}
+              <!-- Category info for debugging -->
+              <span class="ml-2 text-xs text-gray-400">({$resultStore.selectedCategory})</span>
+            </p>
           </div>
           
           <!-- 현재 선택된 카테고리 다시 시도 버튼 -->
@@ -259,52 +346,52 @@
           {/each}
           
           <!-- 페이지네이션 UI -->
-          {#if resultStore.totalPages > 1}
+          {#if totalPages > 1}
             <div class="flex justify-center items-center gap-2 mt-8">
               <button
                 on:click={() => resultStore.changePage(1)}
-                disabled={$resultStore.currentPage === 1 || $resultStore.loading}
-                class="px-3 py-1 rounded border {$resultStore.currentPage === 1 || $resultStore.loading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
+                disabled={$resultStore.currentPage === 1 || $resultStore.loading || $resultStore.isSearching}
+                class="px-3 py-1 rounded border {$resultStore.currentPage === 1 || $resultStore.loading || $resultStore.isSearching ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
               >
                 &laquo;
               </button>
               
               <button
                 on:click={() => resultStore.changePage($resultStore.currentPage - 1)}
-                disabled={$resultStore.currentPage === 1 || $resultStore.loading}
-                class="px-3 py-1 rounded border {$resultStore.currentPage === 1 || $resultStore.loading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
+                disabled={$resultStore.currentPage === 1 || $resultStore.loading || $resultStore.isSearching}
+                class="px-3 py-1 rounded border {$resultStore.currentPage === 1 || $resultStore.loading || $resultStore.isSearching ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
               >
                 이전
               </button>
               
-              {#each resultStore.visiblePageNumbers as page}
+              {#each visiblePageNumbers as page}
                 {#if page === 1 && $resultStore.currentPage > 3}
                   <button
                     on:click={() => resultStore.changePage(page)}
-                    disabled={$resultStore.loading}
-                    class="px-3 py-1 rounded border {page === $resultStore.currentPage ? 'bg-green-500 text-white' : $resultStore.loading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
+                    disabled={$resultStore.loading || $resultStore.isSearching}
+                    class="px-3 py-1 rounded border {page === $resultStore.currentPage ? 'bg-green-500 text-white' : $resultStore.loading || $resultStore.isSearching ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
                   >
                     {page}
                   </button>
                   {#if $resultStore.currentPage > 4}
                     <span class="px-1">...</span>
                   {/if}
-                {:else if page === resultStore.totalPages && $resultStore.currentPage < resultStore.totalPages - 2}
-                  {#if $resultStore.currentPage < resultStore.totalPages - 3}
+                {:else if page === totalPages && $resultStore.currentPage < totalPages - 2}
+                  {#if $resultStore.currentPage < totalPages - 3}
                     <span class="px-1">...</span>
                   {/if}
                   <button
                     on:click={() => resultStore.changePage(page)}
-                    disabled={$resultStore.loading}
-                    class="px-3 py-1 rounded border {page === $resultStore.currentPage ? 'bg-green-500 text-white' : $resultStore.loading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
+                    disabled={$resultStore.loading || $resultStore.isSearching}
+                    class="px-3 py-1 rounded border {page === $resultStore.currentPage ? 'bg-green-500 text-white' : $resultStore.loading || $resultStore.isSearching ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
                   >
                     {page}
                   </button>
                 {:else}
                   <button
                     on:click={() => resultStore.changePage(page)}
-                    disabled={$resultStore.loading}
-                    class="px-3 py-1 rounded border {page === $resultStore.currentPage ? 'bg-green-500 text-white' : $resultStore.loading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
+                    disabled={$resultStore.loading || $resultStore.isSearching}
+                    class="px-3 py-1 rounded border {page === $resultStore.currentPage ? 'bg-green-500 text-white' : $resultStore.loading || $resultStore.isSearching ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
                   >
                     {page}
                   </button>
@@ -313,16 +400,16 @@
               
               <button
                 on:click={() => resultStore.changePage($resultStore.currentPage + 1)}
-                disabled={$resultStore.currentPage === resultStore.totalPages || $resultStore.loading}
-                class="px-3 py-1 rounded border {$resultStore.currentPage === resultStore.totalPages || $resultStore.loading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
+                disabled={$resultStore.currentPage === totalPages || $resultStore.loading || $resultStore.isSearching}
+                class="px-3 py-1 rounded border {$resultStore.currentPage === totalPages || $resultStore.loading || $resultStore.isSearching ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
               >
                 다음
               </button>
               
               <button
-                on:click={() => resultStore.changePage(resultStore.totalPages)}
-                disabled={$resultStore.currentPage === resultStore.totalPages || $resultStore.loading}
-                class="px-3 py-1 rounded border {$resultStore.currentPage === resultStore.totalPages || $resultStore.loading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
+                on:click={() => resultStore.changePage(totalPages)}
+                disabled={$resultStore.currentPage === totalPages || $resultStore.loading || $resultStore.isSearching}
+                class="px-3 py-1 rounded border {$resultStore.currentPage === totalPages || $resultStore.loading || $resultStore.isSearching ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100'}"
               >
                 &raquo;
               </button>

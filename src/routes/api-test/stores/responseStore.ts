@@ -283,7 +283,7 @@ export function createResponseStore(): ResponseStore {
           loading: false
         }));
         
-        // Update pagination store with the new total count
+        // Update pagination store with the new total count and category
         paginationStore.updateExternalState({ 
           totalCount,
           selectedCategory: category,
@@ -291,15 +291,20 @@ export function createResponseStore(): ResponseStore {
           allResponses: allResponsesData
         });
         
-        // Reset to page 1
-        paginationStore.changePage(1);
+        // Reset to page 1 and ensure pagination is updated
+        paginationStore.update(state => ({ ...state, currentPage: 1 }));
+        
+        // Force a re-render of the pagination store
+        setTimeout(() => {
+          paginationStore.update(state => ({ ...state }));
+        }, 0);
       } catch (error) {
         console.error('Error filtering by category:', error);
         // Make sure to set loading to false even if there's an error
         update(state => ({ 
           ...state, 
           loading: false,
-          error: error instanceof Error ? error.message : '카테고리 필터링 중 오류가 발생했습니다.'
+          error: error instanceof Error ? error.message : '카테고리 필터링에 실패했습니다.'
         }));
       }
     },

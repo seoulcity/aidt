@@ -30,10 +30,9 @@ function constructResponseFromStatusUpdates(statusTexts: string[]): string {
 // Retry a single response
 export async function retryResponse(
   response: ResponseData, 
-  batchId: string | null, 
-  responseStore: any
+  batchId: string | null
 ) {
-  // Mark response as retrying
+  // Add the response ID to the retrying IDs set
   retryingIdsStore.update(ids => {
     const newIds = new Set(ids);
     newIds.add(response.id);
@@ -41,6 +40,8 @@ export async function retryResponse(
   });
   
   try {
+    console.log(`Retrying response ${response.id}...`);
+    
     // Prepare request data
     const formData = {
       query: response.input_text,
@@ -455,11 +456,12 @@ export async function retryResponse(
     
     // If we have a response, update the database
     if (streamingText && metadata) {
-      // Delete the old response
-      await responseStore.deleteResponse(response.id, false);
-      
       // Save the new response
-      await responseStore.saveResponse(streamingText, metadata, batchId || undefined);
+      await supabase.from('responses').insert({
+        text: streamingText,
+        metadata: JSON.stringify(metadata),
+        batch_id: batchId || null
+      });
       
       return true;
     } else {

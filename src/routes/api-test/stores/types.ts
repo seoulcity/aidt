@@ -82,6 +82,10 @@ export interface ResultStoreState extends
   // Batch retry properties
   batchRetryInProgress: boolean;
   batchRetryCancelled: boolean;
+  // Search properties
+  searchQuery: string;
+  searchResults: ResponseData[];
+  isSearching: boolean;
 }
 
 // Store interfaces
@@ -126,4 +130,7 @@ export interface ResultStore extends Writable<ResultStoreState> {
   get pageNumbers(): number[];
   get visiblePageNumbers(): number[];
   reset(): void;
+  // Search methods
+  searchResponses(query: string): Promise<void>;
+  clearSearch(): void;
 } 

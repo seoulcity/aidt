@@ -40,7 +40,12 @@ const initialState: ResultStoreState = {
   
   // Batch retry state
   batchRetryInProgress: false,
-  batchRetryCancelled: false
+  batchRetryCancelled: false,
+  
+  // Search state
+  searchQuery: '',
+  searchResults: [],
+  isSearching: false
 };
 
 // Create result store
@@ -164,6 +169,17 @@ function createResultStore(): ResultStore {
     });
   });
   
+  // Helper function to filter responses by search query
+  function filterResponsesBySearch(responses: ResponseData[], query: string): ResponseData[] {
+    if (!query) return responses;
+    
+    const lowerQuery = query.toLowerCase();
+    return responses.filter(response => 
+      response.input_text.toLowerCase().includes(lowerQuery) || 
+      response.response_text.toLowerCase().includes(lowerQuery)
+    );
+  }
+  
   return {
     subscribe,
     
@@ -243,7 +259,13 @@ function createResultStore(): ResultStore {
         // Reset pagination
         paginationStore.update(state => ({ ...state, currentPage: 1 }));
         
-        internalUpdate(state => ({ ...state, loading: false }));
+        // Clear search when selecting a new batch
+        internalUpdate(state => ({ 
+          ...state, 
+          loading: false,
+          searchQuery: '',
+          searchResults: []
+        }));
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : '결과를 불러오는데 실패했습니다.';
         internalUpdate(state => ({ ...state, error: errorMessage, loading: false }));
@@ -252,82 +274,214 @@ function createResultStore(): ResultStore {
     
     // Filter by category
     async filterByCategory(category: string) {
-      // Set loading state first
-      internalUpdate(state => ({ ...state, loading: true, error: null }));
+      internalUpdate(state => ({ ...state, loading: true }));
       
       try {
-        // Call responseStore's filterByCategory method
+        // Update response store
         await responseStore.filterByCategory(category);
+        
+        // Get the current state
+        const currentState = get({ subscribe });
         
         // Reset pagination
         paginationStore.update(state => ({ ...state, currentPage: 1 }));
         
-        // Update our internal state to reflect the new category
+        // Clear search when changing category
         internalUpdate(state => ({ 
           ...state, 
+          loading: false,
+          searchQuery: '',
+          searchResults: [],
+          isSearching: false, // Reset isSearching flag
+          // Ensure the selected category is updated in the store
+          selectedCategory: category
+        }));
+        
+        // Update pagination store's external state with the new category
+        paginationStore.updateExternalState({
           selectedCategory: category,
-          loading: false 
-        }));
-      } catch (error) {
-        console.error('Error in resultStore.filterByCategory:', error);
-        internalUpdate(state => ({ 
-          ...state, 
-          error: error instanceof Error ? error.message : '카테고리 필터링 중 오류가 발생했습니다.',
-          loading: false 
-        }));
+          totalCount: currentState.totalCount
+        });
+        
+        // Force a re-render by updating the store again
+        // This ensures that derived stores like totalPages are recalculated
+        setTimeout(() => {
+          internalUpdate(state => ({ ...state }));
+        }, 0);
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : '카테고리 필터링에 실패했습니다.';
+        internalUpdate(state => ({ ...state, error: errorMessage, loading: false }));
       }
     },
     
     // Change page
     async changePage(page: number) {
+      // Get current state
+      const state = get({ subscribe });
+      
+      // If we have search results, we need to update the responses
+      if (state.searchQuery && state.searchResults.length > 0) {
+        // Calculate the start and end indices for the current page
+        const startIndex = (page - 1) * state.itemsPerPage;
+        const endIndex = Math.min(startIndex + state.itemsPerPage, state.searchResults.length);
+        
+        // Get the responses for the current page
+        const pagedResponses = state.searchResults.slice(startIndex, endIndex);
+        
+        // Update the responses
+        responseStore.update(s => ({
+          ...s,
+          responses: pagedResponses,
+          totalCount: state.searchResults.length // Ensure totalCount is updated with search results length
+        }));
+        
+        // Update pagination store
+        paginationStore.update(s => ({
+          ...s,
+          currentPage: page
+        }));
+        
+        // Also update pagination's external state
+        paginationStore.updateExternalState({
+          totalCount: state.searchResults.length,
+          responses: pagedResponses
+        });
+        
+        // Update our internal state to reflect the new page
+        internalUpdate(s => ({
+          ...s,
+          currentPage: page
+        }));
+        
+        // Force a re-render by updating the store again
+        // This ensures that derived stores like totalPages are recalculated
+        internalUpdate(state => ({ ...state }));
+        
+        return;
+      }
+      
+      // For non-search pagination, use the pagination store
       await paginationStore.changePage(page);
     },
     
-    // Delete a response
+    // Delete response
     async deleteResponse(id: number) {
       await responseStore.deleteResponse(id);
-      
-      // Check if we need to change page after deletion
-      const state = get({ subscribe });
-      if (state.responses.length === 0 && state.currentPage > 1) {
-        await this.changePage(state.currentPage - 1);
-      }
     },
     
-    // Delete a batch
+    // Delete batch
     async deleteBatch(batchId: string) {
       await batchStore.deleteBatch(batchId);
-      
-      // If the deleted batch was selected, go back to the batch list
-      const state = get({ subscribe });
-      if (state.selectedBatchId === batchId) {
-        this.selectBatch(null);
-      }
     },
     
-    // Retry a response
+    // Retry response
     async retryResponse(response: ResponseData, batchId: string | null) {
-      const success = await retryResponse(response, batchId, responseStore);
+      await retryResponse(response, batchId);
+    },
+    
+    // Search responses
+    async searchResponses(query: string) {
+      internalUpdate(state => ({ 
+        ...state, 
+        isSearching: true,
+        searchQuery: query
+      }));
       
-      if (success) {
-        // Reload the current page
-        const state = get({ subscribe });
-        await this.changePage(state.currentPage);
+      try {
+        // If search query is empty, clear search results
+        if (!query.trim()) {
+          internalUpdate(state => ({ 
+            ...state, 
+            isSearching: false,
+            searchResults: [],
+            searchQuery: ''
+          }));
+          
+          // Reset to original responses based on category
+          await this.filterByCategory(get({ subscribe }).selectedCategory);
+          return;
+        }
+        
+        // Get current state
+        const currentState = get({ subscribe });
+        
+        // Filter responses by search query
+        const filteredResponses = filterResponsesBySearch(currentState.allResponses, query);
+        
+        // Calculate the total count of search results
+        const searchResultsCount = filteredResponses.length;
+        
+        // Update state with search results
+        internalUpdate(state => ({ 
+          ...state, 
+          isSearching: false,
+          searchResults: filteredResponses,
+          totalCount: searchResultsCount // Ensure totalCount is updated here
+        }));
+        
+        // Update response store with filtered responses
+        responseStore.update(state => ({ 
+          ...state, 
+          responses: filteredResponses.slice(0, currentState.itemsPerPage), // Only show first page
+          totalCount: searchResultsCount
+        }));
+        
+        // Reset pagination to first page and update external state with new total count
+        paginationStore.update(state => ({ 
+          ...state, 
+          currentPage: 1 
+        }));
+        
+        // Update pagination store's external state with the new search results count
+        paginationStore.updateExternalState({
+          totalCount: searchResultsCount,
+          responses: filteredResponses.slice(0, currentState.itemsPerPage),
+          allResponses: filteredResponses
+        });
+        
+        // Force a re-render by updating the store again
+        // This ensures that derived stores like totalPages are recalculated
+        internalUpdate(state => ({ ...state }));
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : '검색에 실패했습니다.';
+        internalUpdate(state => ({ 
+          ...state, 
+          error: errorMessage, 
+          isSearching: false
+        }));
       }
     },
     
-    // Retry all responses in a category
+    // Clear search
+    clearSearch() {
+      const currentCategory = get({ subscribe }).selectedCategory;
+      
+      internalUpdate(state => ({ 
+        ...state, 
+        searchQuery: '',
+        searchResults: [],
+        isSearching: false
+      }));
+      
+      // Reset to original responses based on category
+      this.filterByCategory(currentCategory);
+      
+      // Force a re-render by updating the store again
+      // This ensures that derived stores like totalPages are recalculated
+      setTimeout(() => {
+        internalUpdate(state => ({ ...state }));
+      }, 0);
+    },
+    
+    // Retry batch by category
     async retryBatchByCategory(category: string, concurrentLimit: number, progressCallback: (progress: number, total: number) => void) {
       // Get the current state
       const state = get({ subscribe });
       
       // Get the batch ID
       const batchId = state.selectedBatchId;
-      if (!batchId) {
-        throw new Error('배치 ID가 없습니다.');
-      }
       
-      await retryBatchByCategory(
+      return retryBatchByCategory(
         category, 
         concurrentLimit, 
         batchId, 
@@ -335,9 +489,6 @@ function createResultStore(): ResultStore {
         responseStore, 
         progressCallback
       );
-      
-      // Reload the current page
-      await this.changePage(state.currentPage);
     },
     
     // Cancel batch retry
@@ -345,8 +496,10 @@ function createResultStore(): ResultStore {
       cancelBatchRetry();
     },
     
-    // Check if a response is currently being retried
-    isRetrying,
+    // Check if a response is being retried
+    isRetrying(id: number) {
+      return isRetrying(id);
+    },
     
     // Utility functions
     isValidArray,
@@ -355,34 +508,9 @@ function createResultStore(): ResultStore {
     // Reset store
     reset() {
       internalSet(initialState);
-      batchStore.set({
-        batchSummaries: [],
-        selectedBatchId: null,
-        isIndividualMode: false,
-        deletingBatchId: null,
-        deletingBatchProgress: 0,
-        loading: false,
-        error: null
-      });
-      responseStore.set({
-        responses: [],
-        allResponses: [],
-        categories: [],
-        selectedCategory: '전체',
-        totalCount: 0,
-        deletingIds: new Set<number>(),
-        _currentBatchId: null,
-        _isIndividualMode: false,
-        loading: false,
-        error: null
-      });
-      paginationStore.set({
-        currentPage: 1,
-        itemsPerPage: 20
-      });
     }
   };
 }
 
-// Create and export result store instance
+// Create and export the store
 export const resultStore = createResultStore(); 
