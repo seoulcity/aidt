@@ -280,9 +280,6 @@ function createResultStore(): ResultStore {
         // Update response store
         await responseStore.filterByCategory(category);
         
-        // Get the current state
-        const currentState = get({ subscribe });
-        
         // Reset pagination
         paginationStore.update(state => ({ ...state, currentPage: 1 }));
         
@@ -292,22 +289,8 @@ function createResultStore(): ResultStore {
           loading: false,
           searchQuery: '',
           searchResults: [],
-          isSearching: false, // Reset isSearching flag
-          // Ensure the selected category is updated in the store
-          selectedCategory: category
+          isSearching: false // Reset isSearching flag
         }));
-        
-        // Update pagination store's external state with the new category
-        paginationStore.updateExternalState({
-          selectedCategory: category,
-          totalCount: currentState.totalCount
-        });
-        
-        // Force a re-render by updating the store again
-        // This ensures that derived stores like totalPages are recalculated
-        setTimeout(() => {
-          internalUpdate(state => ({ ...state }));
-        }, 0);
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : '카테고리 필터링에 실패했습니다.';
         internalUpdate(state => ({ ...state, error: errorMessage, loading: false }));

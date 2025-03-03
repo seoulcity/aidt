@@ -22,18 +22,9 @@
     resultStore.deleteResponse(id);
   }
 
-  // Get the total pages from the store - make it more reactive to store changes
-  $: totalPages = $resultStore.totalCount ? Math.ceil($resultStore.totalCount / $resultStore.itemsPerPage) : 0;
-  $: visiblePageNumbers = totalPages ? Array.from({ length: totalPages }, (_, i) => i + 1).filter(
-    page => page === 1 || page === totalPages || 
-    (page >= $resultStore.currentPage - 2 && page <= $resultStore.currentPage + 2)
-  ) : [];
-  
-  // Watch for category changes and update pagination
-  $: if ($resultStore.selectedCategory) {
-    // This will trigger when the selected category changes
-    totalPages = $resultStore.totalCount ? Math.ceil($resultStore.totalCount / $resultStore.itemsPerPage) : 0;
-  }
+  // Get the total pages from the store
+  $: totalPages = resultStore.totalPages;
+  $: visiblePageNumbers = resultStore.visiblePageNumbers;
 
   // Batch retry functionality
   let showRetryModal = false;
@@ -116,7 +107,6 @@
     searchQuery = '';
     // Apply the category filter (which also clears search in the store)
     resultStore.filterByCategory(category);
-    // The reactive variables will update automatically
   }
 </script>
 
@@ -299,11 +289,7 @@
                 총 {$resultStore.totalCount}개 결과 중 {($resultStore.currentPage - 1) * $resultStore.itemsPerPage + 1}-{Math.min($resultStore.currentPage * $resultStore.itemsPerPage, $resultStore.totalCount)}
               {/if}
             </p>
-            <p class="text-sm text-gray-500">
-              페이지 {$resultStore.currentPage} / {totalPages || 1}
-              <!-- Category info for debugging -->
-              <span class="ml-2 text-xs text-gray-400">({$resultStore.selectedCategory})</span>
-            </p>
+            <p class="text-sm text-gray-500">페이지 {$resultStore.currentPage} / {totalPages || 1}</p>
           </div>
           
           <!-- 현재 선택된 카테고리 다시 시도 버튼 -->

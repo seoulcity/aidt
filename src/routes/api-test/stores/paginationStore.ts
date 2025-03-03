@@ -56,16 +56,6 @@ export function createPaginationStore(): PaginationStore {
     // Update external state
     updateExternalState(newState: Partial<PaginationExternalState>) {
       externalState.update(state => ({ ...state, ...newState }));
-      
-      // Force a recalculation of derived stores
-      const updatedState = get(externalState);
-      const currentState = get({ subscribe });
-      
-      // If totalCount is updated, we need to recalculate totalPages
-      if (newState.totalCount !== undefined || newState.selectedCategory !== undefined) {
-        // This will trigger the derived stores to update
-        update(state => ({ ...state }));
-      }
     },
     
     // Change page
