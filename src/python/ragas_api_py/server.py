@@ -1,24 +1,23 @@
+# src/python/ragas_api_py/server.py
 import os
-import json
 import logging
 from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import uvicorn
-import asyncio
 from dotenv import load_dotenv
 
 # RAGAS 관련 임포트
 from ragas.metrics import (
     Faithfulness,
-    AnswerRelevancy,
+    ResponseRelevancy,
     ContextRecall,
     ContextPrecision
 )
 from ragas.llms import LangchainLLMWrapper
+from ragas.embeddings import LangchainEmbeddingsWrapper
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-# from sentence_transformers import SentenceTransformer  # 메모리 문제로 제거
 
 # 환경 변수 로드
 load_dotenv()
@@ -51,7 +50,7 @@ app.add_middleware(
 evaluator_llm = None
 evaluator_embeddings = None
 # 메트릭 인스턴스 초기화
-answer_relevancy_metric = None
+response_relevancy_metric = None
 faithfulness_metric = None
 context_recall_metric = None
 context_precision_metric = None
@@ -61,7 +60,7 @@ def get_llm():
     if evaluator_llm is None and OPENAI_API_KEY:
         try:
             openai_llm = ChatOpenAI(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 temperature=0,
                 openai_api_key=OPENAI_API_KEY
             )
@@ -76,11 +75,12 @@ def get_embeddings():
     global evaluator_embeddings
     if evaluator_embeddings is None:
         try:
-            # SentenceTransformer 대신 OpenAI 임베딩 사용
-            evaluator_embeddings = OpenAIEmbeddings(
+            # OpenAI 임베딩을 LangchainEmbeddingsWrapper로 감싸기
+            openai_embeddings = OpenAIEmbeddings(
                 openai_api_key=OPENAI_API_KEY,
                 model="text-embedding-3-small"
             )
+            evaluator_embeddings = LangchainEmbeddingsWrapper(openai_embeddings)
             logger.info("Embeddings model initialized successfully")
         except Exception as e:
             logger.error(f"Error initializing embeddings model: {e}")
@@ -88,10 +88,10 @@ def get_embeddings():
     return evaluator_embeddings
 
 def initialize_metrics(llm, embeddings):
-    global answer_relevancy_metric, faithfulness_metric, context_recall_metric, context_precision_metric
+    global response_relevancy_metric, faithfulness_metric, context_recall_metric, context_precision_metric
     
-    if answer_relevancy_metric is None:
-        answer_relevancy_metric = AnswerRelevancy(llm=llm, embeddings=embeddings)
+    if response_relevancy_metric is None:
+        response_relevancy_metric = ResponseRelevancy(llm=llm, embeddings=embeddings)
         
     if faithfulness_metric is None:
         faithfulness_metric = Faithfulness(llm=llm)
@@ -158,7 +158,8 @@ async def evaluate(request: EvaluationRequest):
         for metric_name in request.metrics:
             try:
                 if metric_name == "answer_relevancy":
-                    score = await answer_relevancy_metric.single_turn_ascore(sample)
+                    # answer_relevancy 요청 시 response_relevancy 사용
+                    score = await response_relevancy_metric.single_turn_ascore(sample)
                     scores["answer_relevancy"] = float(score)
                     
                 elif metric_name == "faithfulness":
@@ -166,9 +167,9 @@ async def evaluate(request: EvaluationRequest):
                     scores["faithfulness"] = float(score)
                     
                 elif metric_name == "context_relevancy" and contexts:
-                    # context_relevancy 대신 answer_relevancy 사용 (임시 대체)
-                    logger.warning("context_relevancy metric is not available in this version, using answer_relevancy instead")
-                    score = await answer_relevancy_metric.single_turn_ascore(sample)
+                    # context_relevancy 대신 response_relevancy 사용 (임시 대체)
+                    logger.warning("context_relevancy metric is not available in this version, using response_relevancy instead")
+                    score = await response_relevancy_metric.single_turn_ascore(sample)
                     scores["context_relevancy"] = float(score)
                     
                 elif metric_name == "context_recall" and contexts:
@@ -206,7 +207,7 @@ async def metrics_info():
     return {
         "answer_relevancy": {
             "description": "질문과 응답 간의 관련성을 평가합니다.",
-            "calculation": "응답에서 역으로 질문을 생성한 후, 원래 질문과의 유사도를 계산합니다.",
+            "calculation": "응답이 질문에 얼마나 관련되어 있는지 평가합니다.",
             "range": "0-1 (높을수록 좋음)"
         },
         "faithfulness": {
@@ -216,7 +217,7 @@ async def metrics_info():
         },
         "context_relevancy": {
             "description": "검색된 컨텍스트가 질문과 얼마나 관련이 있는지 평가합니다.",
-            "calculation": "질문과 각 컨텍스트 간의 의미적 유사도를 계산합니다. (SemanticSimilarity 메트릭 사용)",
+            "calculation": "질문과 각 컨텍스트 간의 의미적 유사도를 계산합니다.",
             "range": "0-1 (높을수록 좋음)"
         },
         "context_recall": {

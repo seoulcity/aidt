@@ -195,41 +195,34 @@ export async function handleCategoryUpdate(oldCategory: string, newCategory: str
   }
 }
 
-// Handle batch AI test
-export async function handleBatchAiTest(mode: 'all' | 'pending'): Promise<void> {
-  const currentSelectedBatchId = get(selectedBatchId);
+/**
+ * 병렬로 AI 테스트를 실행하는 함수
+ * @param responsesToProcess 처리할 응답 목록
+ * @param concurrentLimit 동시에 처리할 최대 요청 수
+ * @returns 처리 결과 (성공 및 실패 개수)
+ */
+async function runParallelAiTests(
+  responsesToProcess: ResponseData[],
+  concurrentLimit: number
+): Promise<{ succeeded: number; failed: number; processed: number }> {
+  const total = responsesToProcess.length;
+  let processed = 0;
+  let succeeded = 0;
+  let failed = 0;
   
-  if (!currentSelectedBatchId) return;
+  // 취소 요청 확인을 위한 함수
+  const checkCancellation = () => {
+    if (get(aiTestCancelRequested)) {
+      throw new Error('사용자에 의해 취소됨');
+    }
+  };
   
-  try {
-    isRunningBatchAiTest.set(true);
-    aiTestProgress.set(0);
-    aiTestMessage.set(`${mode === 'all' ? '모든' : '미평가된'} 항목에 대해 AI 테스트 실행 중...`);
-    aiTestCancelRequested.set(false);
-    isAiTestComplete.set(false);
-    aiTestMode.set(mode);
+  // 응답을 배치로 나누어 처리
+  for (let i = 0; i < total; i += concurrentLimit) {
+    checkCancellation();
     
-    // Load all responses for the batch
-    const allResponses = await loadAllBatchResponses(currentSelectedBatchId);
-    
-    // Filter responses based on mode
-    const responsesToProcess = mode === 'all' 
-      ? allResponses 
-      : allResponses.filter(response => !response.ragas_feedback || Object.keys(response.ragas_feedback).length === 0);
-    
-    const total = responsesToProcess.length;
-    let processed = 0;
-    let succeeded = 0;
-    let failed = 0;
-    
-    aiTestMessage.set(`${total}개 항목 중 ${processed}개 처리 중...`);
-    
-    for (const response of responsesToProcess) {
-      // Check for cancellation request
-      if (get(aiTestCancelRequested)) {
-        throw new Error('사용자에 의해 취소됨');
-      }
-      
+    const batch = responsesToProcess.slice(i, i + concurrentLimit);
+    const batchPromises = batch.map(async (response) => {
       try {
         // Run RAGAS test
         const apiResponse = await fetch('http://localhost:8001/evaluate', {
@@ -252,17 +245,75 @@ export async function handleBatchAiTest(mode: 'all' | 'pending'): Promise<void> 
         
         // Save results
         await saveRagasResults(response.id, results);
-        succeeded++;
-        
+        return { success: true, id: response.id };
       } catch (e) {
         console.error(`항목 ${response.id} 평가 중 오류:`, e);
+        return { success: false, id: response.id, error: e };
+      }
+    });
+    
+    // 배치 내의 모든 요청을 병렬로 처리
+    const batchResults = await Promise.all(batchPromises);
+    
+    // 결과 집계
+    batchResults.forEach(result => {
+      processed++;
+      if (result.success) {
+        succeeded++;
+      } else {
         failed++;
       }
-      
-      processed++;
-      aiTestProgress.set(Math.round((processed / total) * 100));
-      aiTestMessage.set(`${total}개 항목 중 ${processed}개 처리 중... (성공: ${succeeded}, 실패: ${failed})`);
-    }
+    });
+    
+    // 진행 상황 업데이트
+    aiTestProgress.set(Math.round((processed / total) * 100));
+    aiTestMessage.set(`${total}개 항목 중 ${processed}개 처리 중... (성공: ${succeeded}, 실패: ${failed})`);
+  }
+  
+  return { succeeded, failed, processed };
+}
+
+/**
+ * 배치 AI 테스트를 실행하는 함수
+ * @param mode 테스트 모드 ('all' 또는 'pending')
+ * @param concurrentRequests 동시에 처리할 요청 수
+ */
+export async function handleBatchAiTest(
+  mode: 'all' | 'pending',
+  concurrentRequests: number = 5
+): Promise<void> {
+  const currentSelectedBatchId = get(selectedBatchId);
+  
+  if (!currentSelectedBatchId) return;
+  
+  try {
+    isRunningBatchAiTest.set(true);
+    aiTestProgress.set(0);
+    aiTestMessage.set(`${mode === 'all' ? '모든' : '미평가된'} 항목에 대해 AI 테스트 실행 중...`);
+    aiTestCancelRequested.set(false);
+    isAiTestComplete.set(false);
+    aiTestMode.set(mode);
+    
+    // 동시 요청 수 유효성 검사
+    const validConcurrentRequests = Math.max(1, Math.min(20, concurrentRequests));
+    
+    // Load all responses for the batch
+    const allResponses = await loadAllBatchResponses(currentSelectedBatchId);
+    
+    // Filter responses based on mode
+    const responsesToProcess = mode === 'all' 
+      ? allResponses 
+      : allResponses.filter(response => !response.ragas_feedback || Object.keys(response.ragas_feedback).length === 0);
+    
+    const total = responsesToProcess.length;
+    
+    aiTestMessage.set(`${total}개 항목 중 0개 처리 중... (동시 처리: ${validConcurrentRequests}개)`);
+    
+    // 병렬 처리 실행
+    const { succeeded, failed, processed } = await runParallelAiTests(
+      responsesToProcess,
+      validConcurrentRequests
+    );
     
     isAiTestComplete.set(true);
     aiTestCompleteMessage.set(`AI 테스트가 완료되었습니다. 총 ${total}개 항목 중 ${succeeded}개 성공, ${failed}개 실패했습니다.`);

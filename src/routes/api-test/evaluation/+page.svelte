@@ -2,13 +2,10 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
-    truncateText,
     formatDate,
     calculatePercentage,
-    ensureFeedbackValue,
     formatAiScore,
-    getAiScoreColorClass,
-    categories
+    getAiScoreColorClass
   } from './evaluationService';
   import CategoryCard from './CategoryCard.svelte';
   import ProgressModal from './ProgressModal.svelte';
@@ -41,11 +38,11 @@
     isRunningBatchAiTest,
     aiTestProgress,
     aiTestMessage,
-    aiTestCancelRequested,
     isAiTestComplete,
     aiTestCompleteMessage,
     resetBatchAiTestState,
-    requestCancelBatchAiTest
+    requestCancelBatchAiTest,
+    concurrentRequests
   } from './evaluationStore';
   
   // Import controllers
@@ -106,7 +103,7 @@
   
   // Start batch AI test
   function startBatchAiTest() {
-    handleBatchAiTest(aiTestConfirmationMode);
+    handleBatchAiTest(aiTestConfirmationMode, $concurrentRequests);
     closeAiTestConfirmation();
   }
   
@@ -407,6 +404,22 @@
           />
           <span class="text-gray-700">미평가 항목만 평가 (총 {$batchStats?.total.ai_pending || 0}개)</span>
         </label>
+      </div>
+      
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1">
+          동시 처리 건수 (1-20)
+        </label>
+        <input 
+          type="number" 
+          min="1" 
+          max="20" 
+          bind:value={$concurrentRequests} 
+          class="w-full p-2 border rounded"
+        />
+        <p class="text-xs text-gray-500 mt-1">
+          동시에 처리할 요청 수를 설정합니다. 너무 많은 요청은 서버 부하를 일으킬 수 있습니다.
+        </p>
       </div>
       
       <div class="flex justify-end space-x-3">

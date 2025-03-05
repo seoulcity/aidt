@@ -385,6 +385,51 @@ export function createResponseStore(): ResponseStore {
       }
     },
 
+    // Load all responses for a specific batch
+    async loadAllResponsesForBatch(batchId: string): Promise<void> {
+      if (!batchId) {
+        console.error('No batch ID provided for loading all responses');
+        return Promise.reject(new Error('No batch ID provided'));
+      }
+      
+      update(state => ({ ...state, loading: true }));
+      
+      try {
+        // Load all responses for the batch (up to 1000 items)
+        const { data, error } = await supabase
+          .from('clario_responses')
+          .select('*')
+          .eq('batch_id', batchId)
+          .order('created_at', { ascending: false })
+          .limit(1000);
+        
+        if (error) {
+          throw error;
+        }
+        
+        const responseData = data || [];
+        
+        update(state => ({
+          ...state,
+          allResponses: responseData,
+          loading: false
+        }));
+        
+        return Promise.resolve();
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : '모든 응답을 불러오는데 실패했습니다.';
+        console.error('Error loading all responses:', errorMessage);
+        
+        update(state => ({ 
+          ...state, 
+          error: errorMessage, 
+          loading: false 
+        }));
+        
+        return Promise.reject(e);
+      }
+    },
+
     // Utility functions
     isValidArray<T>(arr: T[] | null | undefined): arr is T[] {
       return Array.isArray(arr) && arr.length > 0;

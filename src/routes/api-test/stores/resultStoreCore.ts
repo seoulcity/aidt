@@ -1,12 +1,14 @@
-// src/routes/api-test/stores/resultStore.ts
+// src/routes/api-test/stores/resultStoreCore.ts
 import { writable, derived, get } from 'svelte/store';
 import type { ResultStore, ResultStoreState, ResponseData } from './types';
 import { batchStore } from './batchStore';
 import { responseStore } from './responseStore';
 import { paginationStore } from './paginationStore';
-import { retryResponse, retryingIdsStore, isRetrying } from './retryService';
+import { retryingIdsStore, isRetrying } from './retryStoreUtils';
+import { retryResponse } from './singleRetryService';
 import { retryBatchByCategory, batchRetryStore, cancelBatchRetry } from './batchRetryService';
 import { isValidArray, formatDate } from './resultStoreUtils';
+import { searchStore } from './searchService';
 
 // Initial state
 const initialState: ResultStoreState = {
@@ -49,7 +51,7 @@ const initialState: ResultStoreState = {
 };
 
 // Create result store
-function createResultStore(): ResultStore {
+export function createResultStore(): ResultStore {
   const { subscribe, update: internalUpdate, set: internalSet } = writable<ResultStoreState>(initialState);
   
   // Derived store for paginated responses
@@ -169,15 +171,25 @@ function createResultStore(): ResultStore {
     });
   });
   
-  // Helper function to filter responses by search query
-  function filterResponsesBySearch(responses: ResponseData[], query: string): ResponseData[] {
-    if (!query) return responses;
-    
-    const lowerQuery = query.toLowerCase();
-    return responses.filter(response => 
-      response.input_text.toLowerCase().includes(lowerQuery) || 
-      response.response_text.toLowerCase().includes(lowerQuery)
-    );
+  // Subscribe to search store
+  const unsubscribeSearch = searchStore.subscribe(searchState => {
+    internalUpdate(state => ({
+      ...state,
+      searchQuery: searchState.query,
+      searchResults: searchState.results,
+      isSearching: searchState.isSearching
+    }));
+  });
+  
+  // Cleanup function to unsubscribe from all stores
+  function cleanup() {
+    unsubscribeBatch();
+    unsubscribeResponse();
+    unsubscribePagination();
+    unsubscribeRetryingIds();
+    unsubscribeBatchRetry();
+    unsubscribeForPagination();
+    unsubscribeSearch();
   }
   
   return {
@@ -251,23 +263,20 @@ function createResultStore(): ResultStore {
       }
       
       try {
-        const isIndividualMode = batchId === 'individual';
+        // Get batch state to check if it's individual mode
+        const batchState = get(batchStore);
         
-        // Load responses for the batch
-        await responseStore.loadResponses(batchId, isIndividualMode);
+        // Load responses for the selected batch
+        await responseStore.loadResponses(batchId, batchState.isIndividualMode);
         
-        // Reset pagination
-        paginationStore.update(state => ({ ...state, currentPage: 1 }));
+        // Reset pagination to first page
+        await paginationStore.changePage(1);
         
-        // Clear search when selecting a new batch
-        internalUpdate(state => ({ 
-          ...state, 
-          loading: false,
-          searchQuery: '',
-          searchResults: []
-        }));
+        if (shouldLoad) {
+          internalUpdate(state => ({ ...state, loading: false }));
+        }
       } catch (e) {
-        const errorMessage = e instanceof Error ? e.message : '결과를 불러오는데 실패했습니다.';
+        const errorMessage = e instanceof Error ? e.message : '응답을 불러오는데 실패했습니다.';
         internalUpdate(state => ({ ...state, error: errorMessage, loading: false }));
       }
     },
@@ -277,20 +286,16 @@ function createResultStore(): ResultStore {
       internalUpdate(state => ({ ...state, loading: true }));
       
       try {
-        // Update response store
+        // Clear search when changing category
+        searchStore.clear();
+        
+        // Update response store with the new category
         await responseStore.filterByCategory(category);
         
-        // Reset pagination
-        paginationStore.update(state => ({ ...state, currentPage: 1 }));
+        // Reset pagination to first page
+        await paginationStore.changePage(1);
         
-        // Clear search when changing category
-        internalUpdate(state => ({ 
-          ...state, 
-          loading: false,
-          searchQuery: '',
-          searchResults: [],
-          isSearching: false // Reset isSearching flag
-        }));
+        internalUpdate(state => ({ ...state, loading: false }));
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : '카테고리 필터링에 실패했습니다.';
         internalUpdate(state => ({ ...state, error: errorMessage, loading: false }));
@@ -299,178 +304,104 @@ function createResultStore(): ResultStore {
     
     // Change page
     async changePage(page: number) {
-      // Get current state
-      const state = get({ subscribe });
-      
-      // If we have search results, we need to update the responses
-      if (state.searchQuery && state.searchResults.length > 0) {
-        // Calculate the start and end indices for the current page
-        const startIndex = (page - 1) * state.itemsPerPage;
-        const endIndex = Math.min(startIndex + state.itemsPerPage, state.searchResults.length);
-        
-        // Get the responses for the current page
-        const pagedResponses = state.searchResults.slice(startIndex, endIndex);
-        
-        // Update the responses
-        responseStore.update(s => ({
-          ...s,
-          responses: pagedResponses,
-          totalCount: state.searchResults.length // Ensure totalCount is updated with search results length
-        }));
-        
-        // Update pagination store
-        paginationStore.update(s => ({
-          ...s,
-          currentPage: page
-        }));
-        
-        // Also update pagination's external state
-        paginationStore.updateExternalState({
-          totalCount: state.searchResults.length,
-          responses: pagedResponses
-        });
-        
-        // Update our internal state to reflect the new page
-        internalUpdate(s => ({
-          ...s,
-          currentPage: page
-        }));
-        
-        // Force a re-render by updating the store again
-        // This ensures that derived stores like totalPages are recalculated
-        internalUpdate(state => ({ ...state }));
-        
-        return;
+      try {
+        await paginationStore.changePage(page);
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : '페이지 변경에 실패했습니다.';
+        internalUpdate(state => ({ ...state, error: errorMessage }));
       }
-      
-      // For non-search pagination, use the pagination store
-      await paginationStore.changePage(page);
     },
     
     // Delete response
     async deleteResponse(id: number) {
-      await responseStore.deleteResponse(id);
+      try {
+        await responseStore.deleteResponse(id);
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : '응답 삭제에 실패했습니다.';
+        internalUpdate(state => ({ ...state, error: errorMessage }));
+      }
     },
     
     // Delete batch
     async deleteBatch(batchId: string) {
-      await batchStore.deleteBatch(batchId);
+      try {
+        await batchStore.deleteBatch(batchId);
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : '배치 삭제에 실패했습니다.';
+        internalUpdate(state => ({ ...state, error: errorMessage }));
+      }
     },
     
     // Retry response
     async retryResponse(response: ResponseData, batchId: string | null) {
-      await retryResponse(response, batchId);
+      try {
+        await retryResponse(response, batchId);
+      } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : '응답 재시도에 실패했습니다.';
+        internalUpdate(state => ({ ...state, error: errorMessage }));
+      }
     },
     
     // Search responses
     async searchResponses(query: string) {
-      internalUpdate(state => ({ 
-        ...state, 
-        isSearching: true,
-        searchQuery: query
-      }));
+      internalUpdate(state => ({ ...state, loading: true }));
       
       try {
-        // If search query is empty, clear search results
-        if (!query.trim()) {
-          internalUpdate(state => ({ 
-            ...state, 
-            isSearching: false,
-            searchResults: [],
-            searchQuery: ''
-          }));
-          
-          // Reset to original responses based on category
-          await this.filterByCategory(get({ subscribe }).selectedCategory);
-          return;
-        }
-        
-        // Get current state
         const currentState = get({ subscribe });
+        const results = await searchStore.search(query, currentState.allResponses);
         
-        // Filter responses by search query
-        const filteredResponses = filterResponsesBySearch(currentState.allResponses, query);
+        // Update response store with search results
+        responseStore.update(state => ({
+          ...state,
+          responses: results,
+          totalCount: results.length
+        }));
         
-        // Calculate the total count of search results
-        const searchResultsCount = filteredResponses.length;
+        // Reset pagination to first page
+        await paginationStore.changePage(1);
         
-        // Update state with search results
         internalUpdate(state => ({ 
           ...state, 
-          isSearching: false,
-          searchResults: filteredResponses,
-          totalCount: searchResultsCount // Ensure totalCount is updated here
+          loading: false,
+          searchQuery: query
         }));
-        
-        // Update response store with filtered responses
-        responseStore.update(state => ({ 
-          ...state, 
-          responses: filteredResponses.slice(0, currentState.itemsPerPage), // Only show first page
-          totalCount: searchResultsCount
-        }));
-        
-        // Reset pagination to first page and update external state with new total count
-        paginationStore.update(state => ({ 
-          ...state, 
-          currentPage: 1 
-        }));
-        
-        // Update pagination store's external state with the new search results count
-        paginationStore.updateExternalState({
-          totalCount: searchResultsCount,
-          responses: filteredResponses.slice(0, currentState.itemsPerPage),
-          allResponses: filteredResponses
-        });
-        
-        // Force a re-render by updating the store again
-        // This ensures that derived stores like totalPages are recalculated
-        internalUpdate(state => ({ ...state }));
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : '검색에 실패했습니다.';
-        internalUpdate(state => ({ 
-          ...state, 
-          error: errorMessage, 
-          isSearching: false
-        }));
+        internalUpdate(state => ({ ...state, error: errorMessage, loading: false }));
       }
     },
     
     // Clear search
     clearSearch() {
-      const currentCategory = get({ subscribe }).selectedCategory;
+      searchStore.clear();
       
-      internalUpdate(state => ({ 
-        ...state, 
-        searchQuery: '',
-        searchResults: [],
-        isSearching: false
-      }));
-      
-      // Reset to original responses based on category
-      this.filterByCategory(currentCategory);
-      
-      // Force a re-render by updating the store again
-      // This ensures that derived stores like totalPages are recalculated
-      setTimeout(() => {
-        internalUpdate(state => ({ ...state }));
-      }, 0);
+      // Reset to the current category filter
+      const currentState = get({ subscribe });
+      this.filterByCategory(currentState.selectedCategory);
     },
     
     // Retry batch by category
     async retryBatchByCategory(category: string, concurrentLimit: number, progressCallback: (progress: number, total: number) => void) {
-      // Get the current state
-      const state = get({ subscribe });
+      const currentState = get({ subscribe });
       
-      // Get the batch ID
-      const batchId = state.selectedBatchId;
+      // Get all responses for the category
+      let responsesToRetry: ResponseData[] = [];
       
-      return retryBatchByCategory(
-        category, 
+      if (category === '전체') {
+        responsesToRetry = [...currentState.allResponses];
+      } else if (category === '에러') {
+        responsesToRetry = currentState.allResponses.filter(r => !!r.error_message);
+      } else {
+        responsesToRetry = currentState.allResponses.filter(r => r.query_category === category);
+      }
+      
+      await retryBatchByCategory(
+        responsesToRetry, 
+        currentState.selectedBatchId, 
         concurrentLimit, 
-        batchId, 
-        state.isIndividualMode, 
-        responseStore, 
-        progressCallback
+        progressCallback,
+        currentState.isIndividualMode,
+        responseStore
       );
     },
     
@@ -484,16 +415,56 @@ function createResultStore(): ResultStore {
       return isRetrying(id);
     },
     
+    // Reset the store
+    reset() {
+      internalSet(initialState);
+      cleanup();
+    },
+    
     // Utility functions
     isValidArray,
     formatDate,
     
-    // Reset store
-    reset() {
-      internalSet(initialState);
+    // Load all responses for a specific batch
+    async loadAllResponsesForBatch(batchId: string): Promise<void> {
+      if (!batchId) {
+        console.error('No batch ID provided for loading all responses');
+        return Promise.reject(new Error('No batch ID provided'));
+      }
+      
+      internalUpdate(state => ({ 
+        ...state, 
+        loading: true,
+        error: null
+      }));
+      
+      try {
+        // Use responseStore to load all responses for this batch
+        await responseStore.loadAllResponsesForBatch(batchId);
+        
+        // Get the responses from responseStore
+        const responses = get(responseStore).allResponses;
+        
+        // Update our state with these responses
+        internalUpdate(state => ({
+          ...state,
+          allResponses: responses,
+          loading: false
+        }));
+        
+        return Promise.resolve();
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '모든 응답을 불러오는데 실패했습니다.';
+        console.error('Error loading all responses:', errorMessage);
+        
+        internalUpdate(state => ({ 
+          ...state, 
+          error: errorMessage, 
+          loading: false 
+        }));
+        
+        return Promise.reject(error);
+      }
     }
   };
-}
-
-// Create and export the store
-export const resultStore = createResultStore(); 
+} 

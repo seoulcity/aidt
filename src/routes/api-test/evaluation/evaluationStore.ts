@@ -28,6 +28,7 @@ export const aiTestCancelRequested = writable<boolean>(false);
 export const isAiTestComplete = writable<boolean>(false);
 export const aiTestCompleteMessage = writable<string>('');
 export const aiTestMode = writable<'all' | 'pending'>('pending');
+export const concurrentRequests = writable<number>(5); // 병렬 처리를 위한 동시 요청 수 (기본값 5)
 
 // Pagination related state
 export const currentPage = writable<number>(1);

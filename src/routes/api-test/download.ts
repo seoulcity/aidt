@@ -1,5 +1,6 @@
 // src/routes/api-test/download.ts
 import type { Metadata } from './types';
+import type { ResponseData } from './stores/types';
 
 export function downloadJSON(streamingText: string, metadata: Metadata) {
   const data = {
@@ -48,6 +49,51 @@ export function downloadCSV(streamingText: string, metadata: Metadata) {
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   downloadFile(blob, `clario-response-${new Date().toISOString()}.csv`);
+}
+
+export function downloadBatchCSV(responses: ResponseData[], batchId: string) {
+  // Create header row
+  const headers = ['Query', 'Response', 'Category', 'Created At', 'Action', 'Sub Action', 'Token Count', 'Latency (s)', 'Response ID', 'References', 'Recommended Questions', 'Error'];
+  
+  // Create data rows
+  const rows = responses.map(response => {
+    // Ensure reference and recommended_questions are arrays
+    const reference = Array.isArray(response.reference) ? response.reference : [];
+    const recommendedQuestions = Array.isArray(response.recommended_questions) ? response.recommended_questions : [];
+    
+    return [
+      response.input_text || '',
+      response.response_text || '',
+      response.query_category || '',
+      response.created_at || '',
+      response.action || '',
+      response.sub_action || '',
+      response.token_count?.toString() || '',
+      response.latency?.toFixed(2) || '',
+      response.response_id || '',
+      reference.join('; '),
+      recommendedQuestions.join('; '),
+      response.error_message || ''
+    ];
+  });
+  
+  // Combine header and data rows
+  const allRows = [headers, ...rows];
+  
+  // Convert to CSV
+  const csvContent = allRows
+    .map(row => row
+      .map(cell => {
+        if (cell === null || cell === undefined) return '';
+        const escaped = String(cell).replace(/"/g, '""');
+        return /[,\n"]/.test(escaped) ? `"${escaped}"` : escaped;
+      })
+      .join(',')
+    )
+    .join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  downloadFile(blob, `batch-${batchId}-${new Date().toISOString()}.csv`);
 }
 
 function downloadFile(blob: Blob, filename: string) {

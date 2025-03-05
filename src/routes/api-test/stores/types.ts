@@ -102,6 +102,7 @@ export interface ResponseStore extends Writable<ResponseStoreState> {
   saveResponse(responseText: string, metadata: any, batchId?: string): Promise<any>;
   isValidArray<T>(arr: T[] | null | undefined): arr is T[];
   formatDate(dateString: string): string;
+  loadAllResponsesForBatch(batchId: string): Promise<void>;
 }
 
 export interface PaginationStore extends Writable<PaginationStoreState> {
@@ -133,4 +134,6 @@ export interface ResultStore extends Writable<ResultStoreState> {
   // Search methods
   searchResponses(query: string): Promise<void>;
   clearSearch(): void;
+  // New method to load all responses for a batch
+  loadAllResponsesForBatch(batchId: string): Promise<void>;
 } 

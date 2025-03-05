@@ -1,0 +1,148 @@
+event: ClarioMessageID
+id: 9693c9ee-03d0-4d4c-94b5-1bbd4726afb70a13059297974628936
+data: 9693c9ee-03d0-4d4c-94b5-1bbd4726afb70a13059297974628936
+
+event: ClarioStatus
+data: {"type": "main", "text": "질문에 대한 내용을 답변드리기 위한 추론을 시작하겠습니다."}
+
+event: ClarioStatus
+data: {"type": "DONE"}
+
+event: ClarioStatus
+data: {"type": "main", "text": "생성준비 완료"}
+
+event: ClarioStatus
+data: {"type": "DONE"}
+
+event: ClarioStatus
+data: {"type": "FINISH"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "네"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "."}
+
+event: ClarioResponse
+data: {"type": "response", "text": " "}
+
+event: ClarioResponse
+data: {"type": "response", "text": "테"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "스"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "트"}
+
+event: ClarioResponse
+data: {"type": "response", "text": " "}
+
+event: ClarioResponse
+data: {"type": "response", "text": "질"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "문"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "에"}
+
+event: ClarioResponse
+data: {"type": "response", "text": " "}
+
+event: ClarioResponse
+data: {"type": "response", "text": "대"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "한"}
+
+event: ClarioResponse
+data: {"type": "response", "text": " "}
+
+event: ClarioResponse
+data: {"type": "response", "text": "답"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "변"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "을"}
+
+event: ClarioResponse
+data: {"type": "response", "text": " "}
+
+event: ClarioResponse
+data: {"type": "response", "text": "드"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "리"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "겠"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "습"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "니"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "다"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "."}
+
+event: ClarioResponse
+data: {"type": "response", "text": "\n"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "\n"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "더"}
+
+event: ClarioResponse
+data: {"type": "response", "text": " "}
+
+event: ClarioResponse
+data: {"type": "response", "text": "궁"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "금"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "한"}
+
+event: ClarioResponse
+data: {"type": "response", "text": " "}
+
+event: ClarioResponse
+data: {"type": "response", "text": "점"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "이"}
+
+event: ClarioResponse
+data: {"type": "response", "text": " "}
+
+event: ClarioResponse
+data: {"type": "response", "text": "있"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "으"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "신"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "가"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "요"}
+
+event: ClarioResponse
+data: {"type": "response", "text": "?"}
+
+event: ClarioResponse
+data: {"type": "all", "text": "네. 테스트 질문에 대한 답변을 드리겠습니다.\\n\\n더 궁금한 점이 있으신가요?", "input_text": "테스트 질문입니다", "ip_address": "175.106.97.53", "reference": [], "recommended_questions": [], "images": [], "action": "DirectAnswer", "sub_action": null, "token_count": 912, "response_id": "59a0c4cf-d360-4b48-b4ec-54e0ce2718e80a7328763506864765", "latency": 4.26498421933502}
+

@@ -2,7 +2,8 @@
 import { writable, get } from 'svelte/store';
 import type { ResponseData } from './types';
 import { supabase } from '$lib/supabaseClient';
-import { retryingIdsStore } from './retryService';
+import { retryingIdsStore } from './retryStoreUtils';
+import { processStreamingResponse } from './retryStreamHandler';
 
 // Store for batch retry state
 export const batchRetryStore = writable({
@@ -12,59 +13,13 @@ export const batchRetryStore = writable({
 
 // Retry all responses in a category
 export async function retryBatchByCategory(
-  category: string, 
-  concurrentLimit: number, 
+  responsesToRetry: ResponseData[],
   batchId: string | null,
-  isIndividualMode: boolean,
-  responseStore: any,
-  progressCallback: (progress: number, total: number) => void
+  concurrentLimit: number,
+  progressCallback: (progress: number, total: number) => void,
+  isIndividualMode: boolean = false,
+  responseStore: any = null
 ) {
-  // Get all responses for the category
-  let responsesToRetry: ResponseData[] = [];
-  
-  if (category === '전체') {
-    // Get all responses for the batch
-    const { data, error } = await supabase
-      .from('clario_responses')
-      .select('*')
-      .eq(isIndividualMode ? 'is_batch' : 'batch_id', isIndividualMode ? false : batchId)
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      throw new Error('응답을 불러오는데 실패했습니다.');
-    }
-    
-    responsesToRetry = data || [];
-  } else if (category === '에러') {
-    // Get error responses
-    const { data, error } = await supabase
-      .from('clario_responses')
-      .select('*')
-      .eq(isIndividualMode ? 'is_batch' : 'batch_id', isIndividualMode ? false : batchId)
-      .not('error_message', 'is', null)
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      throw new Error('에러 응답을 불러오는데 실패했습니다.');
-    }
-    
-    responsesToRetry = data || [];
-  } else {
-    // Get responses for the specific category
-    const { data, error } = await supabase
-      .from('clario_responses')
-      .select('*')
-      .eq(isIndividualMode ? 'is_batch' : 'batch_id', isIndividualMode ? false : batchId)
-      .eq('query_category', category)
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      throw new Error(`${category} 카테고리의 응답을 불러오는데 실패했습니다.`);
-    }
-    
-    responsesToRetry = data || [];
-  }
-  
   // If no responses to retry, return
   if (responsesToRetry.length === 0) {
     return;
@@ -132,6 +87,7 @@ export async function retryBatchByCategory(
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
           },
           body: JSON.stringify(formData)
         });
@@ -140,73 +96,44 @@ export async function retryBatchByCategory(
           throw new Error(`HTTP error! status: ${apiResponse.status}`);
         }
         
-        const reader = apiResponse.body?.getReader();
-        if (!reader) throw new Error('Response body is not readable');
-        
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let streamingText = '';
-        let metadata: any = null;
-        
-        while (true) {
-          // If cancelled, stop processing
-          if (get(batchRetryStore).cancelled) {
-            reader.cancel();
-            break;
-          }
-          
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          buffer += decoder.decode(value, { stream: true });
-          
-          const events = buffer.split('\n\n');
-          buffer = events.pop() || '';
-          
-          for (const event of events) {
-            if (!event.trim()) continue;
-            
-            const lines = event.split('\n');
-            const eventData: { [key: string]: string } = {};
-            
-            for (const line of lines) {
-              if (line.startsWith('event: ')) {
-                eventData.event = line.slice(7);
-              } else if (line.startsWith('data: ')) {
-                eventData.data = line.slice(6);
-              }
-            }
-            
-            if (eventData.event === 'ClarioResponse') {
-              try {
-                const parsedData = JSON.parse(eventData.data);
-                if (parsedData.type === 'response') {
-                  streamingText += parsedData.text;
-                } else if (parsedData.type === 'all') {
-                  metadata = {
-                    ...parsedData,
-                    input_text: response.input_text,
-                    query_category: response.query_category || '분류 없음',
-                    action: parsedData.action || '',
-                    token_count: parsedData.token_count || 0,
-                    response_id: parsedData.response_id || '',
-                    latency: parsedData.latency || 0
-                  };
-                }
-              } catch (e) {
-                console.error('Failed to parse response data:', e);
-              }
-            }
-          }
-        }
+        // Process the streaming response
+        const result = await processStreamingResponse(apiResponse, response);
+        const streamingText = result.streamingText;
+        const metadata = result.metadata;
         
         // If we have a response and not cancelled, update the database
         if (streamingText && metadata && !get(batchRetryStore).cancelled) {
-          // Delete the old response
-          await responseStore.deleteResponse(response.id, false);
-          
-          // Save the new response
-          await responseStore.saveResponse(streamingText, metadata, batchId);
+          // If responseStore is provided, use it to delete and save the response
+          if (responseStore) {
+            // Delete the old response
+            await responseStore.deleteResponse(response.id, false);
+            
+            // Save the new response
+            await responseStore.saveResponse(streamingText, metadata, batchId);
+          } else {
+            // Otherwise, use supabase directly
+            // Delete the old response
+            await supabase
+              .from('clario_responses')
+              .delete()
+              .eq('id', response.id);
+            
+            // Save the new response
+            await supabase
+              .from('clario_responses')
+              .insert({
+                input_text: metadata.input_text,
+                output_text: streamingText,
+                query_category: metadata.query_category,
+                action: metadata.action,
+                token_count: metadata.token_count,
+                response_id: metadata.response_id,
+                latency: metadata.latency,
+                batch_id: batchId,
+                is_batch: isIndividualMode,
+                error_message: metadata.error_message || null
+              });
+          }
         }
       } catch (error) {
         console.error(`Error retrying response ${response.id}:`, error);
@@ -250,5 +177,5 @@ export async function retryBatchByCategory(
 
 // Cancel batch retry
 export function cancelBatchRetry() {
-  batchRetryStore.update(state => ({ ...state, cancelled: true }));
+  batchRetryStore.set({ inProgress: false, cancelled: true });
 } 

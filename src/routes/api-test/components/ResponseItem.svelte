@@ -8,10 +8,12 @@
   export let formatDate: (dateString: string) => string;
   export let isValidArray: <T>(arr: T[] | null | undefined) => arr is T[];
   export let isDeleting: boolean = false;
+  export let isDetailView: boolean = false;
   
   const dispatch = createEventDispatcher<{
     delete: { id: number };
     retry: { response: ResponseData, batchId: string | null };
+    view: { id: number };
   }>();
   
   function handleDelete() {
@@ -22,11 +24,20 @@
     dispatch('retry', { response, batchId });
   }
   
+  function handleView() {
+    if (!isDetailView) {
+      dispatch('view', { id: response.id });
+    }
+  }
+  
   // Determine if this is an error response
   $: hasError = !!response.error_message;
 </script>
 
-<div class="border rounded-lg p-6 bg-white shadow-sm {hasError ? 'border-red-300' : ''}">
+<div 
+  class="border rounded-lg p-6 bg-white shadow-sm {hasError ? 'border-red-300' : ''} {!isDetailView ? 'hover:shadow-md transition-shadow cursor-pointer' : ''}"
+  on:click={handleView}
+>
   <div class="flex justify-between items-start mb-4">
     <div>
       <h3 class="font-bold text-lg mb-2">Query: {response.input_text}</h3>

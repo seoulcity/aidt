@@ -1,3 +1,4 @@
+<!-- src/routes/api-test/evaluation/CategoryCard.svelte -->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { calculatePercentage, formatAiScore, getAiScoreColorClass } from './evaluationService';

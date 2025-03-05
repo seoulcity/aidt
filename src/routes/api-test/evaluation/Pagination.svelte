@@ -1,3 +1,4 @@
+<!-- src/routes/api-test/evaluation/Pagination.svelte -->
 <script lang="ts">
   export let currentPage: number;
   export let totalPages: number = 1; // 기본값 설정

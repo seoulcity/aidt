@@ -1,3 +1,4 @@
+<!-- src/routes/api-test/evaluation/ResponseItem.svelte -->
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { truncateText, formatDate, ensureFeedbackValue, categories } from './evaluationService';
