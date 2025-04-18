@@ -10,7 +10,6 @@
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
-		"@supabase/supabase-js": "^2.43.1",
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/kit": "^2.8.1",
 		"@sveltejs/vite-plugin-svelte": "^3.0.0",
@@ -31,6 +30,7 @@
 	"dependencies": {
 		"@langchain/core": "^0.3.18",
 		"@material-symbols/font-400": "^0.27.2",
+		"@supabase/supabase-js": "^2.39.7",
 		"@types/dompurify": "^3.0.5",
 		"@types/marked": "^5.0.2",
 		"cookie": "^1.0.1",
@@ -47,5 +47,11 @@
 		"tailwind-scrollbar": "^3.1.0",
 		"vkbeautify": "^0.99.3",
 		"zod": "^3.23.8"
+	},
+	"overrides": {
+		"@supabase/postgrest-js": "1.8.5"
+	},
+	"resolutions": {
+		"@supabase/postgrest-js": "1.8.5"
 	}
 }
