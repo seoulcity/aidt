@@ -6,8 +6,8 @@ const config = {
 	kit: {
 		adapter: adapter({
 			// Vercel Edge 함수 대신 Node.js 함수 사용
-			runtime: 'nodejs18'
-		}),
+			runtime: 'nodejs18.x'
+		})
 	},
 	preprocess: vitePreprocess()
 };
