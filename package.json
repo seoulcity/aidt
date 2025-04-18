@@ -43,7 +43,7 @@
 		"marked": "^15.0.4",
 		"mathjax": "^3.2.2",
 		"mathlive": "^0.102.0",
-		"p-queue": "^6.6.2",
+		"p-queue": "6.6.2",
 		"pdf-parse": "^1.1.1",
 		"pdfjs-dist": "^4.8.69",
 		"pretty-data": "^0.40.0",
@@ -52,15 +52,6 @@
 		"zod": "^3.23.8"
 	},
 	"overrides": {
-		"@supabase/postgrest-js": "1.8.5",
-		"p-queue": "6.6.2",
-		"langsmith": "0.0.72",
-		"langchain": "0.1.17"
-	},
-	"resolutions": {
-		"@supabase/postgrest-js": "1.8.5",
-		"p-queue": "6.6.2",
-		"langsmith": "0.0.72",
-		"langchain": "0.1.17"
+		"@supabase/postgrest-js": "1.8.5"
 	}
 }
