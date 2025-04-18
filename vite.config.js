@@ -5,20 +5,12 @@ export default defineConfig({
 	plugins: [sveltekit()],
 	optimizeDeps: {
 		include: ['pdfjs-dist'],
-		exclude: ['pdfjs-dist/build/pdf.worker.min.js', 'langchain', 'langsmith', 'p-queue']
+		exclude: ['pdfjs-dist/build/pdf.worker.min.js']
 	},
 	build: {
 		commonjsOptions: {
 			include: [/pdfjs-dist/]
-		},
-		rollupOptions: {
-			// langchain 관련 외부 모듈로 처리
-			external: ['langchain', 'langsmith', 'p-queue'],
-			output: {
-				format: 'es'
-			}
-		},
-		ssr: false
+		}
 	},
 	server: {
 		fs: {

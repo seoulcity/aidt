@@ -1,24 +1,39 @@
 // src/lib/pressReleaseChain.js
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { StructuredOutputParser } from "langchain/output_parsers";
 import { z } from "zod";
 import { chatCompletion } from './clovaStudioService';
 
-const outputParser = StructuredOutputParser.fromZodSchema(
-  z.object({
-    analysis: z.object({
-      title: z.string(),
-      what: z.string(),
-      when: z.string(),
-      where: z.string(),
-      who: z.string(),
-      why: z.string(),
-    }),
-    nextQuestion: z.string(),
-    isComplete: z.boolean().describe("모든 필수 정보가 충분히 수집되었는지 여부"),
-    judgment: z.enum(['0', '1']).describe("정보 수집 완료 여부 (1: 완료, 0: 미완료)")
-  })
-);
+// LangChain 없이 직접 Zod 스키마 정의
+const outputSchema = z.object({
+  analysis: z.object({
+    title: z.string(),
+    what: z.string(),
+    when: z.string(),
+    where: z.string(),
+    who: z.string(),
+    why: z.string(),
+  }),
+  nextQuestion: z.string(),
+  isComplete: z.boolean().describe("모든 필수 정보가 충분히 수집되었는지 여부"),
+  judgment: z.enum(['0', '1']).describe("정보 수집 완료 여부 (1: 완료, 0: 미완료)")
+});
+
+// 포맷 지침 직접 구현
+function getFormatInstructions() {
+  return `다음 JSON 형식으로 응답해주세요:
+{
+  "analysis": {
+    "title": "보도자료 제목/주제",
+    "what": "주요 내용",
+    "when": "시기",
+    "where": "장소",
+    "who": "관련 조직/인물",
+    "why": "목적/의의"
+  },
+  "nextQuestion": "다음에 물어볼 질문",
+  "isComplete": true/false,
+  "judgment": "0" 또는 "1"
+}`;
+}
 
 const FINAL_PRESS_RELEASE_TEMPLATE = `지금까지 수집된 정보를 바탕으로 보도자료를 작성해주세요.
 
@@ -63,13 +78,11 @@ const INITIAL_VALIDATION_TEMPLATE = `당신은 보도자료 작성을 위한 전
 
 export async function validatePressReleaseInput(userInput, conversationHistory = '') {
     try {
-        const prompt = ChatPromptTemplate.fromTemplate(INITIAL_VALIDATION_TEMPLATE);
-        
-        const formattedPrompt = await prompt.format({
-            conversationHistory: conversationHistory,
-            userInput: userInput,
-            format_instructions: outputParser.getFormatInstructions()
-        });
+        // 프롬프트 직접 포맷팅
+        const formattedPrompt = INITIAL_VALIDATION_TEMPLATE
+            .replace('{conversationHistory}', conversationHistory)
+            .replace('{userInput}', userInput)
+            .replace('{format_instructions}', getFormatInstructions());
 
         const response = await chatCompletion(
             INITIAL_VALIDATION_TEMPLATE,
@@ -78,7 +91,10 @@ export async function validatePressReleaseInput(userInput, conversationHistory =
 
         let parsedResponse;
         try {
-            parsedResponse = await outputParser.parse(response);
+            // JSON 응답 파싱
+            parsedResponse = JSON.parse(response);
+            // Zod로 유효성 검사
+            parsedResponse = outputSchema.parse(parsedResponse);
             parsedResponse.judgment = parsedResponse.isComplete ? '1' : '0';
         } catch (parseError) {
             console.error('Error parsing response:', parseError);
@@ -134,11 +150,9 @@ function formatFallbackResponse(response) {
 
 export async function generatePressRelease(collectedInfo) {
     try {
-        const prompt = ChatPromptTemplate.fromTemplate(FINAL_PRESS_RELEASE_TEMPLATE);
-        
-        const formattedPrompt = await prompt.format({
-            collectedInfo: collectedInfo
-        });
+        // 프롬프트 직접 포맷팅
+        const formattedPrompt = FINAL_PRESS_RELEASE_TEMPLATE
+            .replace('{collectedInfo}', collectedInfo);
 
         const response = await chatCompletion(
             FINAL_PRESS_RELEASE_TEMPLATE,
