@@ -11,7 +11,7 @@
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^3.0.0",
-		"@sveltejs/adapter-vercel": "^5.7.0",
+		"@sveltejs/adapter-vercel": "^4.0.0",
 		"@sveltejs/kit": "^2.8.1",
 		"@sveltejs/vite-plugin-svelte": "^3.0.0",
 		"@types/eslint": "^8.56.0",
@@ -38,10 +38,12 @@
 		"dompurify": "^3.2.3",
 		"dotenv": "^16.4.5",
 		"katex": "^0.16.21",
-		"langchain": "^0.3.8",
+		"langchain": "0.1.17",
+		"langsmith": "0.0.72",
 		"marked": "^15.0.4",
 		"mathjax": "^3.2.2",
 		"mathlive": "^0.102.0",
+		"p-queue": "^6.6.2",
 		"pdf-parse": "^1.1.1",
 		"pdfjs-dist": "^4.8.69",
 		"pretty-data": "^0.40.0",
@@ -50,9 +52,15 @@
 		"zod": "^3.23.8"
 	},
 	"overrides": {
-		"@supabase/postgrest-js": "1.8.5"
+		"@supabase/postgrest-js": "1.8.5",
+		"p-queue": "6.6.2",
+		"langsmith": "0.0.72",
+		"langchain": "0.1.17"
 	},
 	"resolutions": {
-		"@supabase/postgrest-js": "1.8.5"
+		"@supabase/postgrest-js": "1.8.5",
+		"p-queue": "6.6.2",
+		"langsmith": "0.0.72",
+		"langchain": "0.1.17"
 	}
 }
