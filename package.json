@@ -41,6 +41,7 @@
 		"marked": "^15.0.4",
 		"mathjax": "^3.2.2",
 		"mathlive": "^0.102.0",
+		"pdf-parse": "^1.1.1",
 		"pdfjs-dist": "^4.8.69",
 		"pretty-data": "^0.40.0",
 		"tailwind-scrollbar": "^3.1.0",
