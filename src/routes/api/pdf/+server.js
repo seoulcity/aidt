@@ -8,19 +8,14 @@ export async function POST({ request }) {
         const extractType = formData.get('extract_type') || 'text';
         const pageNumber = parseInt(formData.get('page_number')) || 1;
         
-        // FastAPI 서버로 요청 전달
-        const apiFormData = new FormData();
-        apiFormData.append('file', file);
-        apiFormData.append('extract_type', extractType);
-        apiFormData.append('page_number', pageNumber.toString());
-
-        const response = await fetch('http://localhost:8000/pdf', {
-            method: 'POST',
-            body: apiFormData
+        // In production environment, we don't have access to the PDF processing server
+        // Return a dummy response with an error message
+        return json({
+            success: false,
+            error: 'PDF extraction is not available in production. Please run the application locally with the PDF processing server running.',
+            content: 'PDF extraction unavailable in production',
+            elements: []
         });
-
-        const data = await response.json();
-        return json(data);
     } catch (error) {
         console.error('PDF extraction error:', error);
         return json({
