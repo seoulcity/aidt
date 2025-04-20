@@ -1,6 +1,7 @@
 <!-- src/components/PronunciationGuide.svelte -->
 <script lang="ts">
     export let isOpen = false;
+    export let language: 'Eng' | 'Kor' = 'Eng';
 </script>
 
 {#if isOpen}
@@ -47,8 +48,13 @@
                 </div>
                 <ul class="mt-2 text-sm text-gray-600 space-y-1 list-disc list-inside ml-2">
                     <li>각 단어와 그 안의 개별 음소(발음 단위)에 대한 점수를 보여줍니다.</li>
-                    <li>예: <code class="text-xs bg-gray-100 p-1 rounded">old|&#123;o(oʊ):100, l(l):94, d(d):98&#125;</code></li>
-                    <li><code class="text-xs bg-gray-100 p-1 rounded">old</code> 단어에서 <code class="text-xs bg-gray-100 p-1 rounded">o</code> 음소는 100점, <code class="text-xs bg-gray-100 p-1 rounded">l</code> 음소는 94점</li>
+                    {#if language === 'Eng'}
+                        <li>예: <code class="text-xs bg-gray-100 p-1 rounded">old|&#123;o(oʊ):100, l(l):94, d(d):98&#125;</code></li>
+                        <li><code class="text-xs bg-gray-100 p-1 rounded">old</code> 단어에서 <code class="text-xs bg-gray-100 p-1 rounded">o</code> 음소는 100점, <code class="text-xs bg-gray-100 p-1 rounded">l</code> 음소는 94점</li>
+                    {:else}
+                        <li>예: <code class="text-xs bg-gray-100 p-1 rounded">안녕|&#123;ㅇ(a):98, ㄴ(n):95, ㄴ(y):97, ㅕ(eo):96, ㅇ(ng):99&#125;</code></li>
+                        <li><code class="text-xs bg-gray-100 p-1 rounded">안녕</code> 단어에서 <code class="text-xs bg-gray-100 p-1 rounded">ㅇ</code> 음소는 98점, <code class="text-xs bg-gray-100 p-1 rounded">ㄴ</code> 음소는 95점</li>
+                    {/if}
                 </ul>
             </div>
             
@@ -65,6 +71,6 @@
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z" clip-rule="evenodd" />
         </svg>
-        발음 평가 결과 이해하기
+        {language === 'Eng' ? '영어' : '한국어'} 발음 평가 결과 이해하기
     </button>
 {/if} 
