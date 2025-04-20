@@ -3,6 +3,8 @@
     import { onMount } from 'svelte';
     import ClovaSpeechRecognizer from '../../../components/ClovaSpeechRecognizer.svelte';
     import ClovaSpeechResult from '../../../components/ClovaSpeechResult.svelte';
+    import PronunciationGuide from '../../../components/PronunciationGuide.svelte';
+    import PronunciationExamples from '../../../components/PronunciationExamples.svelte';
 
     let recordingStatus = false;
     let audioBlob: Blob | null = null;
@@ -13,6 +15,8 @@
     let micPermission: PermissionState | null = null;
     let recognitionResult: any = null;
     let referenceText = "Nice to meet you.";
+    let guideOpen = false;
+    let examplesOpen = false;
     
     onMount(() => {
         // 마이크 권한 상태 확인
@@ -125,19 +129,33 @@
     const handleError = (event: CustomEvent) => {
         alert(`음성 인식 오류: ${event.detail.message}`);
     };
+    
+    const handleSelectExample = (event: CustomEvent<string>) => {
+        referenceText = event.detail;
+    };
 </script>
 
 <div class="max-w-4xl mx-auto p-6">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">영어 발음 평가</h1>
+    <h1 class="text-3xl font-bold text-gray-800 mb-6">ClaBi 디지털교과서 솔루션 AI다움 영어 발음 평가</h1>
+    
+    <PronunciationGuide bind:isOpen={guideOpen} />
     
     <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
         <h2 class="text-xl font-semibold text-gray-700 mb-4">발음 녹음하기</h2>
         
         <div class="space-y-4">
             <div class="mb-4">
-                <label for="referenceText" class="block text-sm font-medium text-gray-700 mb-1">
-                    평가 대상 문장 (발음할 문장)
-                </label>
+                <div class="flex items-end justify-between mb-1">
+                    <label for="referenceText" class="block text-sm font-medium text-gray-700">
+                        평가 대상 문장 (발음할 문장)
+                    </label>
+                    <div class="flex space-x-2">
+                        <PronunciationExamples 
+                            bind:showExamples={examplesOpen} 
+                            on:select={handleSelectExample} 
+                        />
+                    </div>
+                </div>
                 <input
                     type="text"
                     id="referenceText"
@@ -146,7 +164,7 @@
                     class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <p class="mt-1 text-sm text-gray-500">
-                    정확한 발음 평가를 위해 발음할 문장을 입력해주세요.
+                    정확한 발음 평가를 위해 발음할 문장을 입력하거나 예시 문장을 선택하세요.
                 </p>
             </div>
 
