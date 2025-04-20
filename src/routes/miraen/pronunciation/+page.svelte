@@ -1,15 +1,18 @@
 <!-- src/routes/miraen/pronunciation/+page.svelte -->
 <script lang="ts">
     import { onMount } from 'svelte';
+    import ClovaSpeechRecognizer from '../../../components/ClovaSpeechRecognizer.svelte';
+    import ClovaSpeechResult from '../../../components/ClovaSpeechResult.svelte';
 
     let recordingStatus = false;
     let audioBlob: Blob | null = null;
-    let transcription = '';
     let mediaRecorder: MediaRecorder | null = null;
     let audioChunks: Blob[] = [];
     let timer: NodeJS.Timeout | null = null;
     let timeLeft = 15;
     let micPermission: PermissionState | null = null;
+    let recognitionResult: any = null;
+    let referenceText = "Nice to meet you.";
     
     onMount(() => {
         // 마이크 권한 상태 확인
@@ -48,31 +51,11 @@
 
     const handleRecordingComplete = (blob: Blob) => {
         audioBlob = blob;
+        // 새로운 녹음이 완료되면 이전 인식 결과 초기화
+        recognitionResult = null;
     };
 
     const requestMicrophonePermission = async () => {
-        // 개발 환경에서 mediaDevices 폴리필
-        if (navigator.mediaDevices === undefined) {
-            navigator.mediaDevices = {};
-        }
-        
-        // getUserMedia 폴리필
-        if (navigator.mediaDevices.getUserMedia === undefined) {
-            navigator.mediaDevices.getUserMedia = function(constraints) {
-                const getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-                
-                if (!getUserMedia) {
-                    console.error('이 브라우저는 마이크 기능을 지원하지 않습니다.');
-                    alert('죄송합니다. 이 브라우저는 마이크 기능을 지원하지 않습니다.\n다른 브라우저(예: Chrome)를 사용해주세요.');
-                    return Promise.reject(new Error('getUserMedia is not implemented'));
-                }
-
-                return new Promise((resolve, reject) => {
-                    getUserMedia.call(navigator, constraints, resolve, reject);
-                });
-            }
-        }
-
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(track => track.stop());
@@ -87,28 +70,6 @@
     };
 
     const startRecording = async () => {
-        // 개발 환경에서 mediaDevices 폴리필
-        if (navigator.mediaDevices === undefined) {
-            navigator.mediaDevices = {};
-        }
-        
-        // getUserMedia 폴리필
-        if (navigator.mediaDevices.getUserMedia === undefined) {
-            navigator.mediaDevices.getUserMedia = function(constraints) {
-                const getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-                
-                if (!getUserMedia) {
-                    console.error('이 브라우저는 마이크 기능을 지원하지 않습니다.');
-                    alert('죄송합니다. 이 브라우저는 마이크 기능을 지원하지 않습니다.\n다른 브라우저(예: Chrome)를 사용해주세요.');
-                    return Promise.reject(new Error('getUserMedia is not implemented'));
-                }
-
-                return new Promise((resolve, reject) => {
-                    getUserMedia.call(navigator, constraints, resolve, reject);
-                });
-            }
-        }
-
         // 권한이 없는 경우 권한 요청
         if (micPermission !== 'granted') {
             const permitted = await requestMicrophonePermission();
@@ -157,8 +118,12 @@
         }
     };
 
-    const submitAudio = async () => {
-        // 오디오 제출 로직 구현 예정
+    const handleRecognitionResult = (event: CustomEvent) => {
+        recognitionResult = event.detail;
+    };
+
+    const handleError = (event: CustomEvent) => {
+        alert(`음성 인식 오류: ${event.detail.message}`);
     };
 </script>
 
@@ -169,6 +134,22 @@
         <h2 class="text-xl font-semibold text-gray-700 mb-4">발음 녹음하기</h2>
         
         <div class="space-y-4">
+            <div class="mb-4">
+                <label for="referenceText" class="block text-sm font-medium text-gray-700 mb-1">
+                    평가 대상 문장 (발음할 문장)
+                </label>
+                <input
+                    type="text"
+                    id="referenceText"
+                    bind:value={referenceText}
+                    placeholder="예: Nice to meet you."
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p class="mt-1 text-sm text-gray-500">
+                    정확한 발음 평가를 위해 발음할 문장을 입력해주세요.
+                </p>
+            </div>
+
             <div class="flex flex-col items-center justify-center p-8 bg-gray-50 rounded-lg">
                 {#if recordingStatus}
                     <div class="mb-4 text-lg font-semibold text-gray-700">
@@ -200,24 +181,21 @@
                         <track kind="captions" />
                     </audio>
                 </div>
+                
+                <ClovaSpeechRecognizer 
+                    audioBlob={audioBlob}
+                    language="Eng"
+                    enableAssessment={true}
+                    referenceText={referenceText}
+                    enableGraph={true}
+                    on:recognitionResult={handleRecognitionResult}
+                    on:error={handleError}
+                />
             {/if}
-
-            <button
-                class="w-full py-3 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                disabled={!audioBlob}
-                on:click={submitAudio}
-            >
-                발음 평가하기
-            </button>
         </div>
     </div>
 
-    {#if transcription}
-        <div class="bg-white rounded-xl shadow-sm p-6">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4">평가 결과</h2>
-            <div class="p-4 bg-gray-50 rounded-lg">
-                <p class="text-gray-700">{transcription}</p>
-            </div>
-        </div>
+    {#if recognitionResult}
+        <ClovaSpeechResult result={recognitionResult} />
     {/if}
 </div> 
