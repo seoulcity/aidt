@@ -13,9 +13,6 @@
     let isLoading = false;
     let error: string | null = null;
     
-    const INVOKE_URL = 'https://clovaspeech-gw.ncloud.com/recog/v1/stt';
-    const SECRET_KEY = '90389110ada444f28569b4b57d8a059f';
-    
     async function sendAudioToClova() {
         if (!audioBlob) {
             error = "오디오 파일이 없습니다.";
@@ -40,20 +37,18 @@
                 params.append('graph', 'true');
             }
             
-            const url = `${INVOKE_URL}?${params.toString()}`;
+            // 내부 API 프록시 URL
+            const url = `/api/clova/speech?${params.toString()}`;
             
             // API 요청 보내기
             const response = await fetch(url, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/octet-stream',
-                    'X-CLOVASPEECH-API-KEY': SECRET_KEY
-                },
                 body: audioBlob
             });
             
             if (!response.ok) {
-                throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);
+                const errorData = await response.json();
+                throw new Error(errorData.error || `API 요청 실패: ${response.status}`);
             }
             
             const result = await response.json();
