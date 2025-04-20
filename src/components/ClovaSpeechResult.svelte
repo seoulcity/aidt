@@ -41,7 +41,7 @@
                             <div class="h-20 bg-white border border-gray-200 rounded p-2">
                                 <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
                                     <polyline
-                                        points={result.ref_graph.map((val: number, i: number) => `${i / (result.ref_graph.length - 1) * 100},${100 - (val / Math.max(...result.ref_graph) * 100)}`).join(' ')}
+                                        points={result.ref_graph.map((val, i) => `${i / (result.ref_graph.length - 1) * 100},${100 - (val / Math.max(...result.ref_graph) * 100)}`).join(' ')}
                                         stroke="rgba(79, 70, 229, 0.8)"
                                         stroke-width="2"
                                         fill="none"
@@ -54,7 +54,7 @@
                             <div class="h-20 bg-white border border-gray-200 rounded p-2">
                                 <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
                                     <polyline
-                                        points={result.usr_graph.map((val: number, i: number) => `${i / (result.usr_graph.length - 1) * 100},${100 - (val / Math.max(...result.usr_graph) * 100)}`).join(' ')}
+                                        points={result.usr_graph.map((val, i) => `${i / (result.usr_graph.length - 1) * 100},${100 - (val / Math.max(...result.usr_graph) * 100)}`).join(' ')}
                                         stroke="rgba(220, 38, 38, 0.8)"
                                         stroke-width="2"
                                         fill="none"
