@@ -40,6 +40,15 @@
             // 내부 API 프록시 URL
             const url = `/api/clova/speech?${params.toString()}`;
             
+            console.log('[CLOVA 클라이언트] 요청 URL:', url);
+            console.log('[CLOVA 클라이언트] 파라미터:', {
+                language,
+                enableAssessment,
+                referenceText: enableAssessment ? referenceText : '(사용 안함)',
+                enableGraph,
+                audioSize: audioBlob?.size || 0
+            });
+            
             // API 요청 보내기
             const response = await fetch(url, {
                 method: 'POST',
@@ -48,16 +57,33 @@
             
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error('[CLOVA 클라이언트] 응답 오류:', errorData);
                 throw new Error(errorData.error || `API 요청 실패: ${response.status}`);
             }
             
             const result = await response.json();
             
+            // 콘솔에 결과 로그 찍기
+            console.log('[CLOVA 클라이언트] 응답 결과:', result);
+            
+            // 특정 필드들 자세히 로깅
+            if (result.text) {
+                console.log('[CLOVA 클라이언트] 인식된 텍스트:', result.text);
+            }
+            
+            if (result.assessment_score !== undefined) {
+                console.log('[CLOVA 클라이언트] 발음 평가 점수:', result.assessment_score);
+            }
+            
+            if (result.assessment_details) {
+                console.log('[CLOVA 클라이언트] 발음 평가 상세:', result.assessment_details);
+            }
+            
             // 결과를 부모 컴포넌트로 전달
             dispatch('recognitionResult', result);
             
         } catch (err) {
-            console.error('음성 인식 오류:', err);
+            console.error('[CLOVA 클라이언트] 오류:', err);
             error = err instanceof Error ? err.message : '음성 인식 중 오류가 발생했습니다.';
             dispatch('error', { message: error });
         } finally {

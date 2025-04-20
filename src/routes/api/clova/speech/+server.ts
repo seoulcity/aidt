@@ -13,6 +13,8 @@ export const POST: RequestHandler = async ({ request, url }) => {
         const utterance = url.searchParams.get('utterance') || '';
         const graph = url.searchParams.get('graph') || 'false';
         
+        console.log('[CLOVA API 요청] 파라미터:', { lang, assessment, utterance, graph });
+        
         // CLOVA API URL 구성
         const apiUrl = new URL(CLOVA_API_URL);
         apiUrl.searchParams.set('lang', lang);
@@ -26,8 +28,11 @@ export const POST: RequestHandler = async ({ request, url }) => {
             apiUrl.searchParams.set('graph', graph);
         }
         
+        console.log('[CLOVA API 요청] URL:', apiUrl.toString());
+        
         // 오디오 바이너리 데이터 가져오기
         const audioBlob = await request.arrayBuffer();
+        console.log('[CLOVA API 요청] 오디오 크기:', audioBlob.byteLength, 'bytes');
         
         // CLOVA API로 요청 전송
         const response = await fetch(apiUrl.toString(), {
@@ -41,7 +46,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('CLOVA API 요청 실패:', response.status, errorText);
+            console.error('[CLOVA API 응답] 오류:', response.status, errorText);
             return json({
                 error: `API 요청 실패: ${response.status} ${response.statusText}`
             }, { status: response.status });
@@ -49,10 +54,13 @@ export const POST: RequestHandler = async ({ request, url }) => {
         
         const result = await response.json();
         
+        // 응답 로그 출력
+        console.log('[CLOVA API 응답] 성공:', JSON.stringify(result, null, 2));
+        
         // 성공 응답 반환
         return json(result);
     } catch (error) {
-        console.error('CLOVA API 요청 중 오류:', error);
+        console.error('[CLOVA API 오류]:', error);
         return json({
             error: error instanceof Error ? error.message : '서버 오류가 발생했습니다.'
         }, { status: 500 });

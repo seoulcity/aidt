@@ -1,6 +1,18 @@
 <!-- src/components/ClovaSpeechResult.svelte -->
 <script lang="ts">
     export let result: any = null;
+    
+    // 결과가 변경될 때마다 콘솔에 로그 출력
+    $: if (result) {
+        console.log('[CLOVA 결과 컴포넌트] 렌더링 데이터:', result);
+        
+        if (result.ref_graph && result.usr_graph) {
+            console.log('[CLOVA 결과 컴포넌트] 그래프 데이터 길이:', {
+                ref_graph: result.ref_graph.length,
+                usr_graph: result.usr_graph.length
+            });
+        }
+    }
 </script>
 
 {#if result}
