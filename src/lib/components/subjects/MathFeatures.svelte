@@ -5,8 +5,8 @@
 
     const mathSections: FeatureSection[] = [
         {
-            title: '맞춤 학습 지원',
-            icon: 'psychology',
+            title: 'AI 튜터',
+            icon: 'smart_toy',
             features: [
                 {
                     href: '/miraen/middle-math',
@@ -16,44 +16,11 @@
                     color: 'orange'
                 },
                 {
-                    href: '/miraen/middle-math-pro',
-                    title: '수준별 문항 추천 시스템(중학교)',
-                    description: '성취 수준에 따라 다른 난이도/틀린 개념 문항 추천(IRT 기반)',
-                    icon: 'analytics',
-                    color: 'blue'
-                },
-                {
-                    title: '유사 문항 제공',
-                    description: '특정 문항에 대한 유사 문항을 받아보세요',
-                    icon: 'content_copy',
-                    disabled: true
-                },
-                {
-                    title: '손글씨 풀이 피드백',
-                    description: '수식이 포함된 손글씨 풀이에 피드백과 힌트를 제공합니다',
-                    icon: 'draw',
-                    href: '/math/handwriting',
-                    color: 'blue'
-                }
-            ]
-        },
-        {
-            title: 'AI 튜터',
-            icon: 'smart_toy',
-            features: [
-                {
                     href: '/miraen/middle-math-pro/adaptive-chat',
                     title: '맞춤형 답변 챗봇',
                     description: '컨텐츠 관련, 학습팁/정서관리, 금칙어 설정 등에 따라 답변을 분석하여 알맞은 답변을 제공합니다',
                     icon: 'chat',
                     color: 'green'
-                },
-                {
-                    href: '/miraen/middle-math-pro/chat',
-                    title: '컨텐츠 및 문제 챗봇',
-                    description: '컨텐츠와 문항별로 달라지는 답변을 확인하세요',
-                    icon: 'quiz',
-                    color: 'purple'
                 },
                 {
                     href: '/miraen/middle-math-pro/persona-chat',

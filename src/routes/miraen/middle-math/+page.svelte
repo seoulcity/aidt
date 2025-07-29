@@ -47,7 +47,9 @@
     try {
       console.log('Loading KaTeX...');
       const katex = await import('katex');
-      window.katex = katex.default;
+      if (typeof window !== 'undefined') {
+        window.katex = katex.default;
+      }
       katexLoaded = true;
       console.log('KaTeX loaded successfully');
       return true;
@@ -101,28 +103,30 @@
 
     await tick();
     
-    document.querySelectorAll('.math-container').forEach(container => {
-      try {
-        const parts = splitTextAndLatex(container.getAttribute('data-content'));
-        container.innerHTML = parts.map(part => {
-          if (part.type === 'text') {
-            return `<span class="text">${part.content}</span>`;
-          } else {
-            try {
-              return window.katex.renderToString(part.content, {
-                displayMode: part.displayMode,
-                throwOnError: false
-              });
-            } catch (err) {
-              console.error('LaTeX rendering error:', err);
-              return `<span class="text-red-500">[LaTeX Error]</span>`;
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      document.querySelectorAll('.math-container').forEach(container => {
+        try {
+          const parts = splitTextAndLatex(container.getAttribute('data-content'));
+          container.innerHTML = parts.map(part => {
+            if (part.type === 'text') {
+              return `<span class="text">${part.content}</span>`;
+            } else {
+              try {
+                return window.katex.renderToString(part.content, {
+                  displayMode: part.displayMode,
+                  throwOnError: false
+                });
+              } catch (err) {
+                console.error('LaTeX rendering error:', err);
+                return `<span class="text-red-500">[LaTeX Error]</span>`;
+              }
             }
-          }
-        }).join('');
-      } catch (error) {
-        console.error('Content processing error:', error);
-      }
-    });
+          }).join('');
+        } catch (error) {
+          console.error('Content processing error:', error);
+        }
+      });
+    }
   }
 
   async function requestHint(problemIndex) {

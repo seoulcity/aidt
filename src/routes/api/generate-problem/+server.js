@@ -15,8 +15,9 @@ export async function POST({ request }) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-NCP-CLOVASTUDIO-API-KEY': CLOVA_STUDIO_API_KEY,
-        'X-NCP-APIGW-API-KEY': CLOVA_STUDIO_APIGW_KEY,
+        'Authorization': `Bearer ${CLOVA_STUDIO_API_KEY}`,
+        'X-NCP-CLOVASTUDIO-REQUEST-ID': `generate-problem-${Date.now()}`,
+        'Accept': 'application/json'
       },
       body: JSON.stringify({
         messages: [
@@ -31,11 +32,12 @@ export async function POST({ request }) {
         ],
         topP: 0.8,
         topK: 0,
-        maxTokens: 1500,
+        maxTokens: 1000,
         temperature: 0.5,
         repeatPenalty: 5.0,
         stopBefore: [],
-        includeAiFilters: true
+        includeAiFilters: true,
+        stream: false
       }),
     });
 

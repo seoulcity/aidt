@@ -20,18 +20,16 @@ export async function POST({ request }) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-NCP-CLOVASTUDIO-API-KEY': EMB_V2_API_KEY,
-                'X-NCP-APIGW-API-KEY': EMB_APIGW_KEY,
-                'X-NCP-CLOVASTUDIO-REQUEST-ID': EMB_REQUEST_ID
+                'Authorization': `Bearer ${EMB_V2_API_KEY}`,
+                'X-NCP-CLOVASTUDIO-REQUEST-ID': `embedding-${Date.now()}`
             },
             body: JSON.stringify(requestBody)
         });
 
         console.log('API 응답 상태:', response.status, response.statusText);
         console.log('요청 헤더:', {
-            'X-NCP-CLOVASTUDIO-API-KEY': EMB_V2_API_KEY,
-            'X-NCP-APIGW-API-KEY': EMB_APIGW_KEY,
-            'X-NCP-CLOVASTUDIO-REQUEST-ID': EMB_REQUEST_ID
+            'Authorization': `Bearer ${EMB_V2_API_KEY}`,
+            'X-NCP-CLOVASTUDIO-REQUEST-ID': `embedding-${Date.now()}`
         });
 
         if (!response.ok) {

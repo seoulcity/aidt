@@ -5,7 +5,7 @@
 
     const englishSections: FeatureSection[] = [
         {
-            title: '영어 쓰기 평가',
+            title: '영어 교과 평가',
             icon: 'translate',
             features: [
                 {
@@ -21,13 +21,6 @@
                     description: '초등 영어 쓰기 활동을 평가해보세요',
                     icon: 'school',
                     color: 'green'
-                },
-                {
-                    href: '/miraen/grammar-search',
-                    title: '영문법 검색형 챗봇',
-                    description: '영문법을 쉽게 검색해보세요',
-                    icon: 'search',
-                    color: 'purple'
                 },
                 {
                     href: '/miraen/pronunciation',

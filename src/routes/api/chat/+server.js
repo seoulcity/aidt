@@ -31,7 +31,8 @@ export async function POST({ request }) {
             temperature: 0.5,
             repeatPenalty: 5.0,
             stopBefore: [],
-            includeAiFilters: true
+            includeAiFilters: true,
+            stream: false
         };
 
         console.log('Sending request to CLOVA Studio:', {
@@ -43,8 +44,9 @@ export async function POST({ request }) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-NCP-CLOVASTUDIO-API-KEY': CLOVA_STUDIO_API_KEY,
-                'X-NCP-APIGW-API-KEY': CLOVA_STUDIO_APIGW_KEY,
+                'Authorization': `Bearer ${CLOVA_STUDIO_API_KEY}`,
+                'X-NCP-CLOVASTUDIO-REQUEST-ID': `chat-request-${Date.now()}`,
+                'Accept': 'application/json'
             },
             body: JSON.stringify(clovaRequestBody),
         });

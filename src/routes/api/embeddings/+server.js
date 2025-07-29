@@ -44,9 +44,8 @@ async function generateEmbedding(text) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-NCP-CLOVASTUDIO-API-KEY': EMB_V2_API_KEY,
-        'X-NCP-APIGW-API-KEY': EMB_APIGW_KEY,
-        'X-NCP-CLOVASTUDIO-REQUEST-ID': EMB_REQUEST_ID
+        'Authorization': `Bearer ${EMB_V2_API_KEY}`,
+        'X-NCP-CLOVASTUDIO-REQUEST-ID': `embeddings-${Date.now()}`
       },
       body: JSON.stringify({ text })
     });
